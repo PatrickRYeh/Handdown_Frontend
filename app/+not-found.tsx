@@ -18,6 +18,7 @@ export default function NotFoundScreen() {
   );
 }
 
+// style sheet fotr the not found screen
 const styles = StyleSheet.create({
   container: {
     flex: 1,
