@@ -1,3 +1,10 @@
+/**
+ * NOT NEED TO TOUCH FOR NOW
+ * RootLayout
+ *
+ * The root layout for the app, which includes the theme provider and
+ * the stack navigator.
+ */
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';

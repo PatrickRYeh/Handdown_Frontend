@@ -1,3 +1,11 @@
+/**
+ * NOT THE ACTUAL THING, JUST A PLACEHOLDER
+ * NearbyScreen
+ *
+ * A placeholder screen that displays a list of nearby listings.
+ * This is a placeholder for the actual Nearby screen, which will
+ * be implemented in the future.
+ */
 import { Image } from 'expo-image';
 import { Platform, StyleSheet } from 'react-native';
 
