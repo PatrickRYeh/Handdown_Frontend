@@ -6,8 +6,8 @@
  * and creating a new listing. Data and images are currently mocked.
  */
 import { router } from 'expo-router';
-import React, { useCallback } from 'react';
-import { Dimensions, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Dimensions, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Appbar, Button, Card, Chip, IconButton, useTheme } from 'react-native-paper';
 
 /**
@@ -16,19 +16,17 @@ import { Appbar, Button, Card, Chip, IconButton, useTheme } from 'react-native-p
 interface Listing {
   id: string;
   price: string;
+  title: string;
+  thumbnail_url: string;
+  // not used in main screen
+  offering_uid: string;
   description: string;
-  imageUrl: string | null;
+  listing_type_id: number;
+  time_updated: string;
+  region_id: number;
+  condition: string;
+  other_images: string[] | null;
 }
-
-// Mocked listings for development. Swap with API-backed data source.
-const listings: Listing[] = [
-  { id: '1', price: '$30', description: 'Pickup by Friday', imageUrl: null },
-  { id: '2', price: '$45', description: 'Pickup ASAP', imageUrl: null },
-  { id: '3', price: '$20', description: 'Pickup by Fart', imageUrl: null },
-  { id: '4', price: '$15', description: 'Pickup Today', imageUrl: null },
-  { id: '5', price: '$50', description: 'Pickup Weekend', imageUrl: null },
-  { id: '6', price: '$40', description: 'Pickup by Tuesday', imageUrl: null },
-];
 
 // Layout constants used to size cards responsively across device widths
 const { width: WINDOW_WIDTH } = Dimensions.get('window');
@@ -37,7 +35,7 @@ const CARD_WIDTH = (WINDOW_WIDTH - CARD_MARGIN * 4) / 2;
 
 interface ListingCardProps {
   price: string;
-  description: string;
+  title: string;
   imageUrl: string | null;
   onPress: () => void;
 }
@@ -45,22 +43,28 @@ interface ListingCardProps {
 /**
  * ListingCard
  *
- * Presentational component that displays a single listing card with a
- * placeholder image area, price, and truncated description. Click/press events
- * are delegated to the parent through `onPress`.
+ * Displays a single listing card. Uses the real image if provided,
+ * otherwise shows a placeholder.
  */
-const ListingCard: React.FC<ListingCardProps> = ({ price, description, imageUrl, onPress }) => {
+const ListingCard: React.FC<ListingCardProps> = ({ price, title, imageUrl, onPress }) => {
   const theme = useTheme();
   
   return (
     <Pressable onPress={onPress}>
       <Card style={styles.card}>
-        {/* Image placeholder — replace with <Image/> when imageUrl is wired up */}
-        <View style={[styles.imagePlaceholder, { backgroundColor: theme.colors.primary }]} />
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.imagePlaceholder}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.imagePlaceholder, { backgroundColor: theme.colors.primary }]} />
+        )}
         <Card.Content style={styles.cardContent}>
           <Text style={styles.priceText}>{price}</Text>
-          <Text style={styles.descriptionText} numberOfLines={1}>
-            {description}
+          <Text style={styles.titleText} numberOfLines={1}>
+            {title}
           </Text>
         </Card.Content>
       </Card>
@@ -69,43 +73,106 @@ const ListingCard: React.FC<ListingCardProps> = ({ price, description, imageUrl,
 };
 
 export default function LandingScreen() {
-  // Filter trigger — will open filter UI (e.g., campus circle). No-op for now.
+  // State to hold fetched listings (from API)
+  const [listings, setListings] = useState<Listing[]>([]);
+
+  // Query parameters for backend
+  // TODO -- grab schema_name from cache
+  // Auto store -- last time (for batches)
+  // Build query -- add filters to window 
+  const query = {
+    schema_name: "ucberkeley",
+    last_time: "2025-07-28T15:00:00Z",
+    limit: 6,
+    filters: {}
+  };
+
+  // Encode query as a URL parameter
+  const queryStr = encodeURIComponent(JSON.stringify(query));
+
+  // Fetch listings (calling the API endpoint here)
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        // TODO -- make this environment var (do ifconfig and find en0 ip address)
+        const backendUrl = "http://192.168.6.172:8000";
+        const res = await fetch(
+          `${backendUrl}/listings/get-batch-listings-by-recency?listing_query_str=${queryStr}`,
+          { headers: { Accept: 'application/json' } }
+        );
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const data = await res.json();
+        console.log("API response:", data.message);
+
+        interface ApiListing {
+          listing_id: string;
+          offering_uid: string;
+          listing_type_id: number;
+          title: string;
+          description: string;
+          price: number;
+          time_created: string;
+          time_updated: string;
+          region_id: number;
+          condition: string;
+          thumbnail_url: string | null;
+          other_images: string[] | null;
+        }
+
+        const mappedListings: Listing[] = (data.listings ?? []).map((item: ApiListing) => ({
+          id: item.listing_id,
+          price: `$${String(item.price)}`,
+          title: item.title,
+          thumbnail_url: item.thumbnail_url,
+          description: item.description ?? '',
+          listing_type_id: item.listing_type_id,
+          time_updated: item.time_updated,
+          region_id: item.region_id,
+          condition: item.condition,
+          other_images: item.other_images ?? null,
+          offering_uid: item.offering_uid,
+        }));
+
+        setListings(mappedListings);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchListings();
+  }, []);
+
   const handleFilterPress = useCallback(() => {}, []);
   
-  // Navigate to the details screen for the tapped listing, passing params
   const handleListingPress = useCallback((listing: Listing) => {
     router.push({
       pathname: '/[id]',
       params: {
         id: listing.id,
         price: listing.price,
-        description: listing.description,
-        imageUrl: listing.imageUrl,
+        title: listing.title,
+        imageUrl: listing.thumbnail_url,
       },
     });
   }, []);
 
-  // Navigate to the create-listing flow
   const handleSellPress = useCallback(() => {
     router.push('/create_listing');
   }, []);
 
-  // FlatList item renderer — memoized for performance
   const renderItem = useCallback(({ item }: { item: Listing }) => (
     <ListingCard
       price={item.price}
-      description={item.description}
-      imageUrl={item.imageUrl}
+      title={item.title}
+      imageUrl={item.thumbnail_url}
       onPress={() => handleListingPress(item)}
     />
   ), [handleListingPress]);
 
-  // Stable key extractor for FlatList
   const keyExtractor = useCallback((item: Listing) => item.id, []);
 
   return (
     <View style={styles.container}>
-      {/* Top App Bar: filter chip, Sell action, search, and account */}
       <Appbar.Header style={styles.header}>
         <View style={styles.headerLeft}>
           <Chip
@@ -129,7 +196,6 @@ export default function LandingScreen() {
         </View>
       </Appbar.Header>
 
-      {/* Listings Grid: 2-column masonry-like layout */}
       <FlatList
         data={listings}
         renderItem={renderItem}
@@ -210,8 +276,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
-  // Secondary, truncated description
-  descriptionText: {
+  // Secondary, truncated title
+  titleText: {
     fontSize: 14,
     color: '#666',
   },
