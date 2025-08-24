@@ -156,29 +156,41 @@ export default function CreateListingScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Submit form: POSTs payload then navigates home (placeholder implementation)
+  // Submit form: POSTs payload then navigates home
   const handlePublish = async () => {
     if (!validateForm()) return;
 
     const payload = {
-      images,
-      title,
-      description,
+      offering_uid: "51e242d0-e313-47f8-a881-27bba664a57b",
+      schema_name: "ucberkeley",
+      listing_type: 1,
+      title: title,
+      description: description,
       price: Number(price),
-      condition,
-      category,
-      location,
-      schema: "berkeley",
-      type: "listing"
+      condition: condition.toLowerCase(),
+      region_id: 1,
+      tag_ids: [1]
     };
 
     try {
-      // TODO: Replace with actual API endpoint
-      await fetch('https://api.example.com/listings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      // Use same backend URL pattern as index.tsx
+      const backendUrl = "http://192.168.1.177:8000";
+      const listingStr = encodeURIComponent(JSON.stringify(payload));
+      
+      const res = await fetch(
+        `${backendUrl}/listings/create-listing?listing_str=${listingStr}`,
+        { 
+          method: 'POST',
+          headers: { 
+            'Accept': 'application/json',
+            'Content-Type': 'application/json' 
+          }
+        }
+      );
+      
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const data = await res.json();
+      console.log("Create listing response:", data.message);
       
       router.push('/');
     } catch (error) {
