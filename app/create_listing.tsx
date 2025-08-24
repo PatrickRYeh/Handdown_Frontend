@@ -177,14 +177,33 @@ export default function CreateListingScreen() {
       const backendUrl = "http://192.168.1.177:8000";
       const listingStr = encodeURIComponent(JSON.stringify(payload));
       
+      // Create FormData for multipart/form-data request
+      const formData = new FormData();
+      
+      // Add images to FormData
+      for (let i = 0; i < images.length; i++) {
+        const imageUri = images[i];
+        
+        // Create a file object from the image URI
+        const response = await fetch(imageUri);
+        const blob = await response.blob();
+        
+        // Generate a filename (you can customize this logic)
+        const filename = `IMG_${Date.now()}_${i}.JPG`;
+        
+        // Append image to FormData
+        formData.append('images', blob, filename);
+      }
+      
       const res = await fetch(
         `${backendUrl}/listings/create-listing?listing_str=${listingStr}`,
         { 
           method: 'POST',
           headers: { 
             'Accept': 'application/json',
-            'Content-Type': 'application/json' 
-          }
+            // Don't set Content-Type - let the browser set it for multipart/form-data
+          },
+          body: formData
         }
       );
       
