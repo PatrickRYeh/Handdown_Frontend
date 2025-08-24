@@ -95,7 +95,7 @@ export default function LandingScreen() {
     const fetchListings = async () => {
       try {
         // TODO -- make this environment var (do ifconfig and find en0 ip address)
-        const backendUrl = "http://192.168.6.172:8000";
+        const backendUrl = "http://192.168.1.177:8000";
         const res = await fetch(
           `${backendUrl}/listings/get-batch-listings-by-recency?listing_query_str=${queryStr}`,
           { headers: { Accept: 'application/json' } }
