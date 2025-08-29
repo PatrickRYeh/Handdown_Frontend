@@ -82,7 +82,6 @@ export default function LandingScreen() {
   // Build query -- add filters to window 
   const query = {
     schema_name: "ucberkeley",
-    last_time: "2025-07-28T15:00:00Z",
     limit: 6,
     filters: {}
   };
