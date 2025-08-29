@@ -15,8 +15,20 @@ import { FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from '
 import { Button, IconButton, Menu, Surface, TextInput } from 'react-native-paper';
 
 // Dropdown options for condition and category
-const CONDITIONS = ['New', 'Used – Like New', 'Used – Fair'];
-const CATEGORIES = ['Furniture', 'Apparel', 'Accessories', 'Kitchen', 'Dorm Essentials', 'Tickets & Passes'];
+// const CONDITIONS = ['New', 'Used – Like New', 'Used – Fair'];
+// UPDATE -- mapping conditions
+const CONDITION_OPTIONS: { label: string; value: string }[] = [
+  { label: 'New', value: 'new' },
+  { label: 'Used – Like New', value: 'used-like-new' },
+  { label: 'Used – Fair', value: 'used-fair' },
+];
+
+// UPDATE -- mapping categories
+const CATEGORIES: { label: string; value: number }[] = [
+  { label: 'Furniture', value: 1 },
+  { label: 'Apparel', value: 4 }
+];
+// const CATEGORIES = ['Furniture', 'Apparel', 'Accessories', 'Kitchen', 'Dorm Essentials', 'Tickets & Passes'];
 
 // Typed props and small presentational components
 interface PhotoThumbnailProps {
@@ -103,8 +115,8 @@ export default function CreateListingScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
-  const [condition, setCondition] = useState('');
-  const [category, setCategory] = useState('');
+  const [conditionValue, setConditionValue] = useState('');
+  const [categoryValue, setCategoryValue] = useState<number | null>(null);
   const [location, setLocation] = useState('');
   
   // Field-level error messages
@@ -148,8 +160,8 @@ export default function CreateListingScreen() {
     if (!title.trim()) newErrors.title = 'Title is required';
     if (!description.trim()) newErrors.description = 'Description is required';
     if (!price || Number.isNaN(Number(price))) newErrors.price = 'Please enter a valid price';
-    if (!condition) newErrors.condition = 'Please select a condition';
-    if (!category) newErrors.category = 'Please select a category';
+    if (!conditionValue) newErrors.condition = 'Please select a condition';
+    if (!categoryValue) newErrors.category = 'Please select a category';
     if (!location) newErrors.location = 'Please select a location';
 
     setErrors(newErrors);
@@ -167,14 +179,14 @@ export default function CreateListingScreen() {
       title: title,
       description: description,
       price: Number(price),
-      condition: condition.toLowerCase(),
+      condition: conditionValue,
       region_id: 1,
-      tag_ids: [1]
+      tag_ids: categoryValue ? [categoryValue] : []
     };
 
     try {
       // Use same backend URL pattern as index.tsx
-      const backendUrl = "http://192.168.1.177:8000";
+      const backendUrl = "http://192.168.6.172:8000";
       const listingStr = encodeURIComponent(JSON.stringify(payload));
       
       // Create FormData for multipart/form-data request
@@ -285,19 +297,25 @@ export default function CreateListingScreen() {
 
           <DropdownField
             label="Condition"
-            value={condition}
-            options={CONDITIONS}
-            onSelect={setCondition}
+            value={CONDITION_OPTIONS.find(c => c.value === conditionValue)?.label || ''}
+            options={CONDITION_OPTIONS.map(c => c.label)}
+            onSelect={(selectedLabel) => {
+              const mapped = CONDITION_OPTIONS.find(c => c.label === selectedLabel);
+              if (mapped) setConditionValue(mapped.value);
+            }}
             error={errors.condition}
           />
 
           <DropdownField
             label="Category"
-            value={category}
-            options={CATEGORIES}
-            onSelect={setCategory}
+            value={CATEGORIES.find(c => c.value === categoryValue)?.label || ''}
+            options={CATEGORIES.map(c => c.label)}
+            onSelect={(selectedLabel) => {
+              const mapped = CATEGORIES.find(c => c.label === selectedLabel);
+              if (mapped) setCategoryValue(mapped.value);
+            }}
             error={errors.category}
-          />
+            />
 
           {/* Location picker placeholder */}
           <Pressable
