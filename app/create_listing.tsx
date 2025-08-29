@@ -181,7 +181,8 @@ export default function CreateListingScreen() {
       price: Number(price),
       condition: conditionValue,
       region_id: 1,
-      tag_ids: categoryValue ? [categoryValue] : []
+      tag_ids: categoryValue ? [categoryValue] : [],
+      campus_region_id: 1
     };
 
     try {
