@@ -5,18 +5,34 @@
  * (filter, sell, search, account). Navigation routes exist for listing details
  * and creating a new listing. Data and images are currently mocked.
  */
+// Router is necessary to navigate between screens in app
 import { router } from 'expo-router';
+// import some special hooks along with React to superpower 
+// useCallback: helps app run faster by remembering functions, like memorizing a math formula so not have rederive it every time
+// useEffect: a component that a tool that lets you do thing when your compnent loads or changes, for actions like "fetch data when the page loads", sets up automatic tasks that happen at speciic times
+// useState: a hook that lets you track and update a values in your component, for storing data that can change (like user input, loading states, etc)
 import React, { useCallback, useEffect, useState } from 'react';
+// Dimensions: tool to get screen size information, to make app look good on different devices
+// FlatList: a component for displaying scrollable lists
+// Image: component for displaying pictures 
+// Pressable: component that responds to clicks/touches 
 import { Dimensions, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+//Appbar: A ready-made top navigation bar, not need to rebuild 
+// Button: a  pre-styled button component
+// Card: a container with nice borders and shadows, like a playing card. Good for displaing in organized, appealing blocks
+// Chip: for small pill-shaped components (lkke tabs or labels)
+// IconButton: a button that shows just an icon
+// useTheme: a hook/tool that gives access to the app's color scheme and styling, helps maintain consistent colors and styling
 import { Appbar, Button, Card, Chip, IconButton, useTheme } from 'react-native-paper';
 
 /**
- * Canonical shape of a listing item. Replace or extend as API evolves.
+ * Interface (in Typescript): creates a blueprint/template -> every time someone creates a listing, it MUST have these eact pieces of information
  */
 interface Listing {
   id: string;
   price: string;
   title: string;
+  // the web address of a small preview image
   thumbnail_url: string;
   // not used in main screen
   offering_uid: string;
@@ -29,14 +45,18 @@ interface Listing {
 }
 
 // Layout constants used to size cards responsively across device widths
+// destructing with naming: get the width object from the 'window' dimensions and name it WINDOW_WIDTH
 const { width: WINDOW_WIDTH } = Dimensions.get('window');
 const CARD_MARGIN = 8;
+// *4 because outside and inside margins
 const CARD_WIDTH = (WINDOW_WIDTH - CARD_MARGIN * 4) / 2;
 
 interface ListingCardProps {
   price: string;
   title: string;
+  // | means that could be empty
   imageUrl: string | null;
+  // function that takes no arguments and doesn't return anything: JUST A DEFAULT!
   onPress: () => void;
 }
 
@@ -46,7 +66,14 @@ interface ListingCardProps {
  * Displays a single listing card. Uses the real image if provided,
  * otherwise shows a placeholder.
  */
+/**
+ * ":" means that this variable has to be type ListingCardProps
+ * React.FC means that this is a functional component (FC) -> compenent that is written like a function
+ * <ListingCardProps> means that this component takes in props that match the ListingCardProps interface
+ * 
+ */
 const ListingCard: React.FC<ListingCardProps> = ({ price, title, imageUrl, onPress }) => {
+  //gets and stores the theme of the app
   const theme = useTheme();
   
   return (
