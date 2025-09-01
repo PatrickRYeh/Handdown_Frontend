@@ -186,7 +186,7 @@ export default function CreateListingScreen() {
 
     try {
       // Use same backend URL pattern as index.tsx
-      const backendUrl = "http://192.168.6.172:8000";
+      const backendUrl = "http://172.20.10.3:8000";
       const listingStr = encodeURIComponent(JSON.stringify(payload));
       
       // Create FormData for multipart/form-data request
