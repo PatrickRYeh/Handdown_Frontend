@@ -141,7 +141,7 @@ export default function LandingScreen() {
     const fetchListings = async () => {
       try {
         // TODO -- make this environment var (do ifconfig and find en0 ip address)
-        const backendUrl = "http://172.20.10.3:8000";
+        const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
         // variable stores the server response, wait for response before continuing
         // ` allow you to insert variables into a string
         // '?' starts the query parameters
