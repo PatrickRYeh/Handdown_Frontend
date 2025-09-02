@@ -9,8 +9,8 @@
 import { router } from 'expo-router';
 // import some special hooks along with React to superpower 
 // useCallback: helps app run faster by remembering functions, like memorizing a math formula so not have rederive it every time
-// useEffect: a component that a tool that lets you do thing when your compnent loads or changes, for actions like "fetch data when the page loads", sets up automatic tasks that happen at speciic times
-// useState: a hook that lets you track and update a values in your component, for storing data that can change (like user input, loading states, etc)
+// useEffect: a component/tool that lets you perform things when your screen loads or changes, for actions like "fetch data when the page loads", sets up automatic tasks that happen at speciic times
+// useState: a hook that lets you track and update values in your component, for storing data that can change (like user input, loading states, etc)
 import React, { useCallback, useEffect, useState } from 'react';
 // Dimensions: tool to get screen size information, to make app look good on different devices
 // FlatList: a component for displaying scrollable lists
@@ -70,7 +70,7 @@ interface ListingCardProps {
  * ":" means that this variable has to be type ListingCardProps
  * React.FC means that this is a functional component (FC) -> compenent that is written like a function
  * <ListingCardProps> means that this component takes in props that match the ListingCardProps interface
- * 
+ * { price, title, imageUrl, onPress } means that this component takes in these four properties/destructers these 4 props
  */
 const ListingCard: React.FC<ListingCardProps> = ({ price, title, imageUrl, onPress }) => {
   //gets and stores the theme of the app
@@ -79,17 +79,24 @@ const ListingCard: React.FC<ListingCardProps> = ({ price, title, imageUrl, onPre
   return (
     <Pressable onPress={onPress}>
       <Card style={styles.card}>
+        {/* '?' is a ternary operator, means if imageUrl is true, then do this, otherwise do this 
+        if yes (first parentheses), then uri: imageUrl, otherwise (':' then second parentheses), then <View> with a background color */}
         {imageUrl ? (
           <Image
             source={{ uri: imageUrl }}
             style={styles.imagePlaceholder}
+            // resizeMode="cover" means that it will scale the image to cover the entire space, maintaining aspect ratio
             resizeMode="cover"
           />
         ) : (
+          // backgroundColor: theme.colors.primary means that the background color will be the primary color of the app (usually purple)
+          // view is just a basic stand-in frame
           <View style={[styles.imagePlaceholder, { backgroundColor: theme.colors.primary }]} />
         )}
+        {/* Card.Content is a component that contains the content of the card */}
         <Card.Content style={styles.cardContent}>
           <Text style={styles.priceText}>{price}</Text>
+          {/* numberOfLines={1} means that the text will be truncated if it is too long */}
           <Text style={styles.titleText} numberOfLines={1}>
             {title}
           </Text>
@@ -99,8 +106,17 @@ const ListingCard: React.FC<ListingCardProps> = ({ price, title, imageUrl, onPre
   );
 };
 
+//main component that will be exported and used in other files
 export default function LandingScreen() {
-  // State to hold fetched listings (from API)
+  /**
+   * State to hold fetched listings (from API)
+   * listings is an array of Listing objects
+   * setListings is a function that updates the listings state
+   * useState is a hook that allows you to track and update a value in your component
+   * <Listing[]> indicates the props interface (from earlier
+   * []) initializes the array to empty
+   */ 
+  
   const [listings, setListings] = useState<Listing[]>([]);
 
   // Query parameters for backend
@@ -117,17 +133,30 @@ export default function LandingScreen() {
   const queryStr = encodeURIComponent(JSON.stringify(query));
 
   // Fetch listings (calling the API endpoint here)
+  /**
+   * useEffect automatically runs/fetches the data when the component loads
+   */
   useEffect(() => {
+    // async means that this function will do things that take a little time
     const fetchListings = async () => {
       try {
         // TODO -- make this environment var (do ifconfig and find en0 ip address)
         const backendUrl = "http://172.20.10.3:8000";
+        // variable stores the server response, wait for response before continuing
+        // ` allow you to insert variables into a string
+        // '?' starts the query parameters
         const res = await fetch(
           `${backendUrl}/listings/get-batch-listings-by-recency?listing_query_str=${queryStr}`,
+          // headers are the "instructions on the outside of the envelope"
+          // Accept: 'application/json' means that the server will only accept JSON responses
           { headers: { Accept: 'application/json' } }
         );
+        // throw stops everything and creates an error
+        // res.status is the error code if one exists (ie 404, 500, etc)
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        // data is the server response, wait for response before continuing
         const data = await res.json();
+        // logs the server's response
         console.log("API response:", data.message);
 
         interface ApiListing {
@@ -145,6 +174,13 @@ export default function LandingScreen() {
           other_images: string[] | null;
         }
 
+        /**
+         * mappedListing is a variable to store the transformed data
+         * Listing[] initializes an empty array of listings in specified format
+         * data.listings extracts the listings data from the response, ?? means if it's null, then use an empty array
+         * .map() is a function that transforms each item in the array into a new format
+         * 
+         */
         const mappedListings: Listing[] = (data.listings ?? []).map((item: ApiListing) => ({
           id: item.listing_id,
           price: `$${String(item.price)}`,
@@ -168,11 +204,15 @@ export default function LandingScreen() {
     fetchListings();
   }, []);
 
+  // default function that does nothing for now
+  // will be used for listing filtering later
   const handleFilterPress = useCallback(() => {}, []);
   
   const handleListingPress = useCallback((listing: Listing) => {
+    // routes to [id] screen and sends the listing id, price, title, and imageUrl
     router.push({
       pathname: '/[id]',
+      // params is the data that is sent to the [id] screen so that not need to load again
       params: {
         id: listing.id,
         price: listing.price,
@@ -191,10 +231,13 @@ export default function LandingScreen() {
       price={item.price}
       title={item.title}
       imageUrl={item.thumbnail_url}
+      // calls the handleListingPress function with the item to send to [id] screen
       onPress={() => handleListingPress(item)}
     />
+    // [handleListingPress]); just closes the useCallback function by saying, only change if handleListingPress changes
   ), [handleListingPress]);
 
+  // just grabs unique id for display
   const keyExtractor = useCallback((item: Listing) => item.id, []);
 
   return (
