@@ -218,6 +218,14 @@ export default function LandingScreen() {
         price: listing.price,
         title: listing.title,
         imageUrl: listing.thumbnail_url,
+        description: listing.description,
+        listing_type_id: listing.listing_type_id.toString(), // convert number to string for URL params
+        time_updated: listing.time_updated,
+        region_id: listing.region_id.toString(), // convert number to string for URL params
+        condition: listing.condition,
+        offering_uid: listing.offering_uid,
+        // Handle the array - convert to JSON string since URL params only accept strings
+        other_images: listing.other_images ? JSON.stringify(listing.other_images) : null,
       },
     });
   }, []);

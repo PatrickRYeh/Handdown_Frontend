@@ -9,7 +9,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { Dimensions, FlatList, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { IconButton, Surface, useTheme } from 'react-native-paper';
 
 // Viewport width used to size the full-bleed carousel slides
@@ -24,7 +24,15 @@ const PLACEHOLDER_IMAGES = Array(4).fill(null);
 interface ListingDetailParams {
   id: string;
   price: string;
+  title: string;
+  imageUrl: string;
   description: string;
+  listing_type_id: string; // comes as string from URL params
+  time_updated: string;
+  region_id: string; // comes as string from URL params
+  condition: string;
+  offering_uid: string;
+  other_images: string | null; // JSON string or null
 }
 
 export default function ListingDetailScreen() {
@@ -32,7 +40,34 @@ export default function ListingDetailScreen() {
   const router = useRouter();
   // Listing data provided via route params
   const params = useLocalSearchParams();
+
+  // Destructure the params object to get the individual properties
+  const {
+    id,
+    price,
+    title,
+    imageUrl,
+    description,
+    listing_type_id,
+    time_updated,
+    region_id,
+    condition,
+    offering_uid,
+    other_images
+  } = params;
   // Index of the currently visible carousel slide
+
+  const listingTypeId = listing_type_id ? parseInt(listing_type_id as string) : 0;
+  const regionId = region_id ? parseInt(region_id as string) : 0;
+  const otherImagesArray: string[] | null = other_images && other_images !== 'null' 
+    ? JSON.parse(other_images as string) 
+    : null;
+
+  // Create the carousel data - use real images if available, otherwise fallback to placeholders
+  const carouselData = otherImagesArray && otherImagesArray.length > 0 
+    ? otherImagesArray 
+    : PLACEHOLDER_IMAGES;
+
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   // Controlled value for the message composer
   const [message, setMessage] = useState("Still selling? I'm interested :)");
@@ -45,10 +80,24 @@ export default function ListingDetailScreen() {
     setMessage('');
   };
 
-  // Renders a single image slide placeholder (swap with <Image> when URLs available)
-  const renderImageItem = () => (
-    <View style={[styles.imagePlaceholder, { backgroundColor: theme.colors.primary }]} />
-  );
+  // Renders a single image slide - real images or placeholder
+  const renderImageItem = ({ item }: { item: string | null }) => {
+    if (item) {
+      // Render real image from URL
+      return (
+        <Image
+          source={{ uri: item }}
+          style={styles.imagePlaceholder}
+          resizeMode="cover"
+        />
+      );
+    } else {
+      // Render placeholder if no image URL
+      return (
+        <View style={[styles.imagePlaceholder, { backgroundColor: theme.colors.primary }]} />
+      );
+    }
+  };
 
   // Updates activeImageIndex based on horizontal scroll position
   const handleScroll = (event: any) => {
@@ -56,7 +105,7 @@ export default function ListingDetailScreen() {
     const index = event.nativeEvent.contentOffset.x / slideSize;
     // Round to nearest integer and clamp via modulo to avoid overflow
     const roundIndex = Math.round(index);
-    setActiveImageIndex(roundIndex % PLACEHOLDER_IMAGES.length);
+    setActiveImageIndex(roundIndex % carouselData.length);
   };
 
   return (
@@ -84,7 +133,7 @@ export default function ListingDetailScreen() {
         <View style={styles.carouselContainer}>
           <FlatList
             ref={flatListRef}
-            data={PLACEHOLDER_IMAGES}
+            data={carouselData}
             renderItem={renderImageItem}
             horizontal
             pagingEnabled
@@ -92,11 +141,11 @@ export default function ListingDetailScreen() {
             onScroll={handleScroll}
             scrollEventThrottle={16}
           />
-          {/* Pagination indicators tied to activeImageIndex */}
+          {/* Pagination indicators tied to activeImageIndex - corresponds to actual images */}
           <View style={styles.paginationDots}>
-            {PLACEHOLDER_IMAGES.map((_, index) => (
+            {carouselData.map((_, index) => (
               <View
-                key={index}
+                key={`${id}-image-${index}`}
                 style={[
                   styles.dot,
                   { backgroundColor: index === activeImageIndex ? '#fff' : 'rgba(255,255,255,0.5)' }
@@ -148,6 +197,7 @@ export default function ListingDetailScreen() {
             <Text style={styles.sellerName}>David</Text>
             <Text style={styles.sellerDetail}>Junior • Data Science</Text>
             <Text style={styles.sellerRating}>⭐⭐⭐⭐</Text>
+            {/* MAKE INTO LISTING LOCATION */}
             <Text style={styles.location}>Southside, Berkeley</Text>
           </View>
         </Surface>
