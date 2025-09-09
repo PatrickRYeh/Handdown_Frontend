@@ -209,7 +209,7 @@ export default function CreateListingScreen() {
       }
       
       const res = await fetch(
-        `${backendUrl}/listings?listing_str=${listingStr}`,
+        `${backendUrl}/listings/?listing_str=${listingStr}`,
         { 
           method: 'POST',
           headers: { 

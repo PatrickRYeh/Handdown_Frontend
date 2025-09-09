@@ -57,16 +57,77 @@ export default function ListingDetailScreen() {
   } = params;
   // Index of the currently visible carousel slide
 
+  // ==========================================
+  // 🔍 DEBUG: RECEIVED PARAMETERS ANALYSIS
+  // This shows what data was passed from the home page
+  // ==========================================
+  console.log("\n=== 📥 LISTING DETAIL DEBUGGING START ===");
+  console.log("📦 All params received:", params);
+  console.log("🖼️ imageUrl (thumbnail):", imageUrl);
+  console.log("🖼️🖼️ other_images (raw):", other_images);
+  console.log("📏 typeof other_images:", typeof other_images);
+  console.log("📏 Value check - is other_images null?", other_images === null);
+  console.log("📏 Value check - is other_images 'null' string?", other_images === 'null');
+  console.log("=== 📥 LISTING DETAIL DEBUGGING END ===\n");
+
   const listingTypeId = listing_type_id ? parseInt(listing_type_id as string) : 0;
   const regionId = region_id ? parseInt(region_id as string) : 0;
   const otherImagesArray: string[] | null = other_images && other_images !== 'null' 
     ? JSON.parse(other_images as string) 
     : null;
 
-  // Create the carousel data - use real images if available, otherwise fallback to placeholders
-  const carouselData = otherImagesArray && otherImagesArray.length > 0 
-    ? otherImagesArray 
-    : PLACEHOLDER_IMAGES;
+  // ==========================================
+  // 🔍 DEBUG: JSON PARSING ANALYSIS
+  // This shows how we processed the other_images data
+  // ==========================================
+  console.log("\n=== 📦 JSON PARSING DEBUGGING START ===");
+  console.log("🔄 Parsed otherImagesArray:", otherImagesArray);
+  console.log("📏 Type of otherImagesArray:", typeof otherImagesArray);
+  if (otherImagesArray) {
+    console.log("📏 Length of otherImagesArray:", otherImagesArray.length);
+  }
+  console.log("=== 📦 JSON PARSING DEBUGGING END ===\n");
+
+  // Create the carousel data - combine thumbnail and other images
+  const createCarouselData = () => {
+    const allImages: (string | null)[] = [];
+    
+    // ==========================================
+    // 🔍 DEBUG: CAROUSEL BUILDING ANALYSIS
+    // This shows how we're combining images for the carousel
+    // ==========================================
+    console.log("\n=== 🎠 CAROUSEL BUILDING DEBUGGING START ===");
+    console.log("🛠️ Creating carousel data...");
+    
+    // Add the main thumbnail image first if it exists
+    if (imageUrl && imageUrl !== 'null') {
+      allImages.push(imageUrl as string);
+      console.log("✅ Added thumbnail image:", imageUrl);
+    } else {
+      console.log("❌ No thumbnail image to add (imageUrl is null or 'null')");
+    }
+    
+    // Add other images if they exist
+    if (otherImagesArray && otherImagesArray.length > 0) {
+      allImages.push(...otherImagesArray);
+      console.log("✅ Added other images:", otherImagesArray);
+      console.log("📏 Number of other images added:", otherImagesArray.length);
+    } else {
+      console.log("❌ No other images to add (otherImagesArray is null or empty)");
+    }
+    
+    console.log("🎯 Final carousel images array:", allImages);
+    console.log("📏 Total number of images in carousel:", allImages.length);
+    
+    const result = allImages.length > 0 ? allImages : PLACEHOLDER_IMAGES;
+    console.log("🎭 Using placeholders?", result === PLACEHOLDER_IMAGES);
+    console.log("=== 🎠 CAROUSEL BUILDING DEBUGGING END ===\n");
+    
+    // If we have no real images, use placeholders
+    return result;
+  };
+
+  const carouselData = createCarouselData();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   // Controlled value for the message composer
@@ -157,6 +218,7 @@ export default function ListingDetailScreen() {
         {/* Primary listing information */}
         <View style={styles.contentContainer}>
           <Text style={styles.price}>{params.price}</Text>
+          <Text style={styles.title}>{params.title}</Text>
           <Text style={styles.description}>{params.description}</Text>
         </View>
         {/* Interaction bar: message composer and quick actions */}
@@ -249,6 +311,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 8,
+  },
+  // Listing title text
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#333',
   },
   // Secondary description text
   description: {

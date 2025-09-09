@@ -159,6 +159,24 @@ export default function LandingScreen() {
         // logs the server's response
         console.log("API response:", data.message);
 
+        // ==========================================
+        // 🔍 DEBUG: API RESPONSE ANALYSIS
+        // This shows what the backend is actually returning
+        // ==========================================
+        console.log("\n=== 🔍 API DEBUGGING START ===");
+        console.log("📦 Full API response:", data);
+        console.log("📊 Number of listings returned:", data.listings?.length || 0);
+        if (data.listings && data.listings.length > 0) {
+          console.log("🔍 First listing raw data:", data.listings[0]);
+          console.log("🖼️ First listing thumbnail_url:", data.listings[0].thumbnail_url);
+          console.log("🖼️🖼️ First listing other_images:", data.listings[0].other_images);
+          console.log("📏 Type of other_images:", typeof data.listings[0].other_images);
+          if (data.listings[0].other_images) {
+            console.log("📏 Length of other_images array:", data.listings[0].other_images.length);
+          }
+        }
+        console.log("=== 🔍 API DEBUGGING END ===\n");
+
         interface ApiListing {
           listing_id: string;
           offering_uid: string;
@@ -195,6 +213,18 @@ export default function LandingScreen() {
           offering_uid: item.offering_uid,
         }));
 
+        // ==========================================
+        // 🔍 DEBUG: DATA MAPPING ANALYSIS
+        // This shows how we transformed the API data
+        // ==========================================
+        console.log("\n=== 🔄 DATA MAPPING DEBUGGING START ===");
+        console.log("📊 Number of mapped listings:", mappedListings.length);
+        if (mappedListings.length > 0) {
+          console.log("🔄 First mapped listing:", mappedListings[0]);
+          console.log("🔄 Mapped other_images:", mappedListings[0].other_images);
+        }
+        console.log("=== 🔄 DATA MAPPING DEBUGGING END ===\n");
+
         setListings(mappedListings);
       } catch (err) {
         console.error(err);
@@ -209,6 +239,17 @@ export default function LandingScreen() {
   const handleFilterPress = useCallback(() => {}, []);
   
   const handleListingPress = useCallback((listing: Listing) => {
+    // ==========================================
+    // 🔍 DEBUG: NAVIGATION DATA ANALYSIS
+    // This shows what data we're sending to the detail page
+    // ==========================================
+    console.log("\n=== 🚀 NAVIGATION DEBUGGING START ===");
+    console.log("🎯 Selected listing:", listing);
+    console.log("🖼️ thumbnail_url being sent:", listing.thumbnail_url);
+    console.log("🖼️🖼️ other_images being sent:", listing.other_images);
+    console.log("📦 JSON string of other_images:", listing.other_images ? JSON.stringify(listing.other_images) : 'null');
+    console.log("=== 🚀 NAVIGATION DEBUGGING END ===\n");
+    
     // routes to [id] screen and sends the listing id, price, title, and imageUrl
     router.push({
       pathname: '/[id]',
