@@ -191,6 +191,7 @@ export default function CreateListingScreen() {
       const listingStr = encodeURIComponent(JSON.stringify(payload));
       
       // Create FormData for multipart/form-data request
+      // FormData is best for image collection
       const formData = new FormData();
       
       // Add images to FormData
@@ -199,6 +200,8 @@ export default function CreateListingScreen() {
         
         // Create a file object from the image URI
         const response = await fetch(imageUri);
+        // converts the downloaded image into a blob
+        // blob is a binary large object to best represent image to computer
         const blob = await response.blob();
         
         // Generate a filename (you can customize this logic)

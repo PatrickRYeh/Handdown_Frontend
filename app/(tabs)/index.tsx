@@ -118,154 +118,123 @@ export default function LandingScreen() {
    */ 
   
   const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
 
   // Query parameters for backend
   // TODO -- grab schema_name from cache
   // Auto store -- last time (for batches)
   // Build query -- add filters to window 
-  const query = {
+  const createQuery = (currentOffset: number) => ({
     schema_name: "ucberkeley",
-    limit: 6,
+    limit: 12,
+    offset: currentOffset,
     filters: {}
-  };
-
-  // Encode query as a URL parameter
-  const queryStr = encodeURIComponent(JSON.stringify(query));
+  });
 
   // Fetch listings (calling the API endpoint here)
-  /**
-   * useEffect automatically runs/fetches the data when the component loads
-   */
-  useEffect(() => {
-    // async means that this function will do things that take a little time
-    const fetchListings = async () => {
-      try {
-        // TODO -- make this environment var (do ifconfig and find en0 ip address)
-        const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-        // variable stores the server response, wait for response before continuing
-        // ` allow you to insert variables into a string
-        // '?' starts the query parameters
-        const res = await fetch(
-          `${backendUrl}/listings/get-batch-listings-by-recency?listing_query_str=${queryStr}`,
-          // headers are the "instructions on the outside of the envelope"
-          // Accept: 'application/json' means that the server will only accept JSON responses
-          { headers: { Accept: 'application/json' } }
-        );
-        // throw stops everything and creates an error
-        // res.status is the error code if one exists (ie 404, 500, etc)
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        // data is the server response, wait for response before continuing
-        const data = await res.json();
-        // logs the server's response
-        console.log("API response:", data.message);
+  const fetchListings = async (currentOffset: number, append: boolean = false) => {
+    if (loading) return; // Prevent duplicate requests
+    
+    setLoading(true);
+    try {
+      const query = createQuery(currentOffset);
+      const queryStr = encodeURIComponent(JSON.stringify(query));
+      
+      const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+      const res = await fetch(
+        `${backendUrl}/listings/get-batch-listings-by-recency?listing_query_str=${queryStr}`,
+        { headers: { Accept: 'application/json' } }
+      );
+      
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const data = await res.json();
 
-        // ==========================================
-        // 🔍 DEBUG: API RESPONSE ANALYSIS
-        // This shows what the backend is actually returning
-        // ==========================================
-        console.log("\n=== 🔍 API DEBUGGING START ===");
-        console.log("📦 Full API response:", data);
-        console.log("📊 Number of listings returned:", data.listings?.length || 0);
-        if (data.listings && data.listings.length > 0) {
-          console.log("🔍 First listing raw data:", data.listings[0]);
-          console.log("🖼️ First listing thumbnail_url:", data.listings[0].thumbnail_url);
-          console.log("🖼️🖼️ First listing other_images:", data.listings[0].other_images);
-          console.log("📏 Type of other_images:", typeof data.listings[0].other_images);
-          if (data.listings[0].other_images) {
-            console.log("📏 Length of other_images array:", data.listings[0].other_images.length);
-          }
-        }
-        console.log("=== 🔍 API DEBUGGING END ===\n");
-
-        interface ApiListing {
-          listing_id: string;
-          offering_uid: string;
-          listing_type_id: number;
-          title: string;
-          description: string;
-          price: number;
-          time_created: string;
-          time_updated: string;
-          region_id: number;
-          condition: string;
-          thumbnail_url: string | null;
-          other_images: string[] | null;
-        }
-
-        /**
+      interface ApiListing {
+        listing_id: string;
+        offering_uid: string;
+        listing_type_id: number;
+        title: string;
+        description: string;
+        price: number;
+        time_created: string;
+        time_updated: string;
+        region_id: number;
+        condition: string;
+        thumbnail_url: string | null;
+        other_images: string[] | null;
+      }
+      
+      /**
          * mappedListing is a variable to store the transformed data
          * Listing[] initializes an empty array of listings in specified format
          * data.listings extracts the listings data from the response, ?? means if it's null, then use an empty array
          * .map() is a function that transforms each item in the array into a new format
-         * 
          */
-        const mappedListings: Listing[] = (data.listings ?? []).map((item: ApiListing) => ({
-          id: item.listing_id,
-          price: `$${String(item.price)}`,
-          title: item.title,
-          thumbnail_url: item.thumbnail_url,
-          description: item.description ?? '',
-          listing_type_id: item.listing_type_id,
-          time_updated: item.time_updated,
-          region_id: item.region_id,
-          condition: item.condition,
-          other_images: item.other_images ?? null,
-          offering_uid: item.offering_uid,
-        }));
+      const mappedListings: Listing[] = (data.listings ?? []).map((item: ApiListing) => ({
+        id: item.listing_id,
+        price: `$${String(item.price)}`,
+        title: item.title,
+        thumbnail_url: item.thumbnail_url,
+        description: item.description ?? '',
+        listing_type_id: item.listing_type_id,
+        time_updated: item.time_updated,
+        region_id: item.region_id,
+        condition: item.condition,
+        other_images: item.other_images ?? null,
+        offering_uid: item.offering_uid,
+      }));
 
-        // ==========================================
-        // 🔍 DEBUG: DATA MAPPING ANALYSIS
-        // This shows how we transformed the API data
-        // ==========================================
-        console.log("\n=== 🔄 DATA MAPPING DEBUGGING START ===");
-        console.log("📊 Number of mapped listings:", mappedListings.length);
-        if (mappedListings.length > 0) {
-          console.log("🔄 First mapped listing:", mappedListings[0]);
-          console.log("🔄 Mapped other_images:", mappedListings[0].other_images);
-        }
-        console.log("=== 🔄 DATA MAPPING DEBUGGING END ===\n");
-
+      // Check if we have more data to load
+      setHasMore(mappedListings.length === 12);
+      
+      if (append) {
+        // Add new listings to existing ones
+        setListings(prev => [...prev, ...mappedListings]);
+      } else {
+        // Replace listings (initial load)
         setListings(mappedListings);
-      } catch (err) {
-        console.error(err);
       }
-    };
+      
+      setOffset(currentOffset + mappedListings.length);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchListings();
+  // Initial load
+  useEffect(() => {
+    fetchListings(0, false);
   }, []);
+
+  // Load more function for infinite scroll
+  const loadMore = () => {
+    if (hasMore && !loading) {
+      fetchListings(offset, true);
+    }
+  };
 
   // default function that does nothing for now
   // will be used for listing filtering later
   const handleFilterPress = useCallback(() => {}, []);
   
   const handleListingPress = useCallback((listing: Listing) => {
-    // ==========================================
-    // 🔍 DEBUG: NAVIGATION DATA ANALYSIS
-    // This shows what data we're sending to the detail page
-    // ==========================================
-    console.log("\n=== 🚀 NAVIGATION DEBUGGING START ===");
-    console.log("🎯 Selected listing:", listing);
-    console.log("🖼️ thumbnail_url being sent:", listing.thumbnail_url);
-    console.log("🖼️🖼️ other_images being sent:", listing.other_images);
-    console.log("📦 JSON string of other_images:", listing.other_images ? JSON.stringify(listing.other_images) : 'null');
-    console.log("=== 🚀 NAVIGATION DEBUGGING END ===\n");
-    
-    // routes to [id] screen and sends the listing id, price, title, and imageUrl
     router.push({
       pathname: '/[id]',
-      // params is the data that is sent to the [id] screen so that not need to load again
       params: {
         id: listing.id,
         price: listing.price,
         title: listing.title,
         imageUrl: listing.thumbnail_url,
         description: listing.description,
-        listing_type_id: listing.listing_type_id.toString(), // convert number to string for URL params
+        listing_type_id: listing.listing_type_id.toString(),
         time_updated: listing.time_updated,
-        region_id: listing.region_id.toString(), // convert number to string for URL params
+        region_id: listing.region_id.toString(),
         condition: listing.condition,
         offering_uid: listing.offering_uid,
-        // Handle the array - convert to JSON string since URL params only accept strings
         other_images: listing.other_images ? JSON.stringify(listing.other_images) : null,
       },
     });
@@ -321,6 +290,14 @@ export default function LandingScreen() {
         numColumns={2}
         contentContainerStyle={styles.listContainer}
         columnWrapperStyle={styles.columnWrapper}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        refreshing={loading && listings.length === 0}
+        onRefresh={() => {
+          setOffset(0);
+          setHasMore(true);
+          fetchListings(0, false);
+        }}
       />
     </View>
   );
