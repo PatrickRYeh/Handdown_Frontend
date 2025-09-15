@@ -312,7 +312,11 @@ export default function LandingScreen() {
         </View>
         <View style={styles.headerRight}>
           <IconButton icon="magnify" size={24} onPress={() => {}} />
-          <IconButton icon="account-circle-outline" size={24} onPress={() => {}} />
+          <IconButton 
+            icon="account-circle-outline" 
+            size={24} 
+            onPress={() => router.push('/profile')} 
+          />
         </View>
       </Appbar.Header>
 
