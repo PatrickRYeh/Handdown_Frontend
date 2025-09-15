@@ -76,6 +76,15 @@ const ListingCard: React.FC<ListingCardProps> = ({ price, title, imageUrl, onPre
   //gets and stores the theme of the app
   const theme = useTheme();
   
+  // 🔍 DEBUG: Check what imageUrl we're receiving
+  console.log('🎨 ListingCard Debug:', {
+    title: title,
+    imageUrl: imageUrl,
+    hasImageUrl: !!imageUrl,
+    imageUrlType: typeof imageUrl,
+    imageUrlLength: imageUrl?.length || 0
+  });
+  
   return (
     <Pressable onPress={onPress}>
       <Card style={styles.card}>
@@ -120,26 +129,34 @@ export default function LandingScreen() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
+  const [lastTime, setLastTime] = useState<string | null>(null);
 
   // Query parameters for backend
   // TODO -- grab schema_name from cache
   // Auto store -- last time (for batches)
   // Build query -- add filters to window 
-  const createQuery = (currentOffset: number) => ({
-    schema_name: "ucberkeley",
-    limit: 12,
-    offset: currentOffset,
-    filters: {}
-  });
+  const createQuery = (last_time: string | null) => {
+    const query: any = {
+      schema_name: "ucberkeley",
+      limit: 12,
+      filters: {}
+    };
+    
+    // Only include last_time if we have one (not for initial load)
+    if (last_time) {
+      query.last_time = last_time;
+    }
+    
+    return query;
+  };
 
   // Fetch listings (calling the API endpoint here)
-  const fetchListings = async (currentOffset: number, append: boolean = false) => {
+  const fetchListings = async (last_time: string | null = null, append: boolean = false) => {
     if (loading) return; // Prevent duplicate requests
     
     setLoading(true);
     try {
-      const query = createQuery(currentOffset);
+      const query = createQuery(last_time);
       const queryStr = encodeURIComponent(JSON.stringify(query));
       
       const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -186,6 +203,18 @@ export default function LandingScreen() {
         offering_uid: item.offering_uid,
       }));
 
+      // 🔍 DEBUG: Check thumbnail URLs
+      console.log('🖼️ Thumbnail URL Debug:');
+      mappedListings.forEach((listing, index) => {
+        console.log(`  Listing ${index + 1}:`, {
+          id: listing.id,
+          title: listing.title,
+          thumbnail_url: listing.thumbnail_url,
+          hasImage: !!listing.thumbnail_url,
+          imageType: typeof listing.thumbnail_url
+        });
+      });
+
       // Check if we have more data to load
       setHasMore(mappedListings.length === 12);
       
@@ -197,7 +226,11 @@ export default function LandingScreen() {
         setListings(mappedListings);
       }
       
-      setOffset(currentOffset + mappedListings.length);
+      // Update lastTime with the time_updated from the last listing
+      if (mappedListings.length > 0) {
+        const lastListing = mappedListings[mappedListings.length - 1];
+        setLastTime(lastListing.time_updated);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -207,13 +240,13 @@ export default function LandingScreen() {
 
   // Initial load
   useEffect(() => {
-    fetchListings(0, false);
+    fetchListings(null, false);
   }, []);
 
   // Load more function for infinite scroll
   const loadMore = () => {
     if (hasMore && !loading) {
-      fetchListings(offset, true);
+      fetchListings(lastTime, true);
     }
   };
 
@@ -294,9 +327,9 @@ export default function LandingScreen() {
         onEndReachedThreshold={0.5}
         refreshing={loading && listings.length === 0}
         onRefresh={() => {
-          setOffset(0);
+          setLastTime(null);
           setHasMore(true);
-          fetchListings(0, false);
+          fetchListings(null, false);
         }}
       />
     </View>
