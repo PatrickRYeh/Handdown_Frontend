@@ -7,7 +7,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { IconButton, Surface } from 'react-native-paper';
 
 export default function ProfileScreen() {
@@ -41,7 +41,10 @@ export default function ProfileScreen() {
           
           {/* Your Listings Card */}
           <Surface style={styles.listingsCard} elevation={0}>
-            <View style={styles.listingsContent}>
+            <Pressable 
+              style={styles.listingsContent}
+              onPress={() => router.push('/Your_Listings')}
+            >
               <View style={styles.iconContainer}>
                 <MaterialCommunityIcons 
                   name="tag" 
@@ -50,7 +53,7 @@ export default function ProfileScreen() {
                 />
               </View>
               <Text style={styles.listingsTitle}>Your Listings</Text>
-            </View>
+            </Pressable>
           </Surface>
         </View>
       </ScrollView>
