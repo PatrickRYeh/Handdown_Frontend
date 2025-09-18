@@ -25,14 +25,13 @@ interface ListingDetailParams {
   id: string;
   price: string;
   title: string;
-  imageUrl: string;
   description: string;
   listing_type_id: string; // comes as string from URL params
   time_updated: string;
   region_id: string; // comes as string from URL params
   condition: string;
   offering_uid: string;
-  other_images: string | null; // JSON string or null
+  listing_images: string; // JSON string of image array or null
 }
 
 export default function ListingDetailScreen() {
@@ -46,40 +45,39 @@ export default function ListingDetailScreen() {
     id,
     price,
     title,
-    imageUrl,
     description,
     listing_type_id,
     time_updated,
     region_id,
     condition,
     offering_uid,
-    other_images
+    listing_images
   } = params;
   // Index of the currently visible carousel slide
 
   const listingTypeId = listing_type_id ? parseInt(listing_type_id as string) : 0;
   const regionId = region_id ? parseInt(region_id as string) : 0;
-  const otherImagesArray: string[] | null = other_images && other_images !== 'null' 
-    ? JSON.parse(other_images as string) 
-    : null;
+  
+  // Parse listing_images from JSON string to array of image objects
+  const listingImagesArray: { position: number; image_url: string }[] | null = 
+    listing_images && listing_images !== 'null' 
+      ? JSON.parse(listing_images as string) 
+      : null;
 
 
-  // Create the carousel data - combine thumbnail and other images
+  // Create the carousel data using listing_images sorted by position
   const createCarouselData = () => {
-    const allImages: (string | null)[] = [];
-    
-    // Add the main thumbnail image first if it exists
-    if (imageUrl && imageUrl !== 'null') {
-      allImages.push(imageUrl as string);
-    }
-    
-    // Add other images if they exist
-    if (otherImagesArray && otherImagesArray.length > 0) {
-      allImages.push(...otherImagesArray);
+    if (listingImagesArray && listingImagesArray.length > 0) {
+      // Sort images by position and extract just the URLs
+      const sortedImages = [...listingImagesArray]
+        .sort((a, b) => a.position - b.position)
+        .map(img => img.image_url);
+      
+      return sortedImages;
     }
     
     // If we have no real images, use placeholders
-    return allImages.length > 0 ? allImages : PLACEHOLDER_IMAGES;
+    return PLACEHOLDER_IMAGES;
   };
 
   const carouselData = createCarouselData();

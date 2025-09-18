@@ -32,16 +32,14 @@ interface Listing {
   id: string;
   price: string;
   title: string;
-  // the web address of a small preview image
   thumbnail_url: string;
-  // not used in main screen
   offering_uid: string;
   description: string;
   listing_type_id: number;
   time_updated: string;
   region_id: number;
   condition: string;
-  other_images: string[] | null;
+  listing_images: { position: number; image_url: string }[] | null;
 }
 
 // Layout constants used to size cards responsively across device widths
@@ -75,15 +73,6 @@ interface ListingCardProps {
 const ListingCard: React.FC<ListingCardProps> = ({ price, title, imageUrl, onPress }) => {
   //gets and stores the theme of the app
   const theme = useTheme();
-  
-  // 🔍 DEBUG: Check what imageUrl we're receiving
-  console.log('🎨 ListingCard Debug:', {
-    title: title,
-    imageUrl: imageUrl,
-    hasImageUrl: !!imageUrl,
-    imageUrlType: typeof imageUrl,
-    imageUrlLength: imageUrl?.length || 0
-  });
   
   return (
     <Pressable onPress={onPress}>
@@ -126,9 +115,17 @@ export default function LandingScreen() {
    * []) initializes the array to empty
    */ 
   
+  // State variable to hold all of the listings currently displayed on the screen
+  // starts as empty array and new listings added when load more pages
   const [listings, setListings] = useState<Listing[]>([]);
+  // State variable to hold the loading state (whether data is currently being fetched)
+  // starts as false and becomes true when loading data
   const [loading, setLoading] = useState(false);
+  // State variable that tracks whether there are more listings available to load from the server
+  // starts as true and becomes false when there are no more listings to load, stops app from loading more listings when none left
   const [hasMore, setHasMore] = useState(true);
+  // State variable to hold the last time a listing was updated, last_time param for batch query
+  // starts as null and becomes a string when a listing is updated
   const [lastTime, setLastTime] = useState<string | null>(null);
 
   // Query parameters for backend
@@ -179,8 +176,7 @@ export default function LandingScreen() {
         time_updated: string;
         region_id: number;
         condition: string;
-        thumbnail_url: string | null;
-        other_images: string[] | null;
+        listing_images: { position: number; image_url: string }[] | null;
       }
       
       /**
@@ -189,30 +185,29 @@ export default function LandingScreen() {
          * data.listings extracts the listings data from the response, ?? means if it's null, then use an empty array
          * .map() is a function that transforms each item in the array into a new format
          */
-      const mappedListings: Listing[] = (data.listings ?? []).map((item: ApiListing) => ({
-        id: item.listing_id,
-        price: `$${String(item.price)}`,
-        title: item.title,
-        thumbnail_url: item.thumbnail_url,
-        description: item.description ?? '',
-        listing_type_id: item.listing_type_id,
-        time_updated: item.time_updated,
-        region_id: item.region_id,
-        condition: item.condition,
-        other_images: item.other_images ?? null,
-        offering_uid: item.offering_uid,
-      }));
+      const mappedListings: Listing[] = (data.listings ?? []).map((item: ApiListing) => {
+        // Sort images by position and get the first one for thumbnail
+        const sortedImages = item.listing_images 
+          ? [...item.listing_images].sort((a, b) => a.position - b.position)
+          : null;
+        
+        const thumbnailUrl = sortedImages && sortedImages.length > 0 
+          ? sortedImages[0].image_url 
+          : '';
 
-      // 🔍 DEBUG: Check thumbnail URLs
-      console.log('🖼️ Thumbnail URL Debug:');
-      mappedListings.forEach((listing, index) => {
-        console.log(`  Listing ${index + 1}:`, {
-          id: listing.id,
-          title: listing.title,
-          thumbnail_url: listing.thumbnail_url,
-          hasImage: !!listing.thumbnail_url,
-          imageType: typeof listing.thumbnail_url
-        });
+        return {
+          id: item.listing_id,
+          price: `$${String(item.price)}`,
+          title: item.title,
+          thumbnail_url: thumbnailUrl,
+          description: item.description ?? '',
+          listing_type_id: item.listing_type_id,
+          time_updated: item.time_updated,
+          region_id: item.region_id,
+          condition: item.condition,
+          listing_images: item.listing_images,
+          offering_uid: item.offering_uid,
+        };
       });
 
       // Check if we have more data to load
@@ -220,6 +215,8 @@ export default function LandingScreen() {
       
       if (append) {
         // Add new listings to existing ones
+        // prev is previous state of listing array
+        // ... unpacks each array so can concatenate them
         setListings(prev => [...prev, ...mappedListings]);
       } else {
         // Replace listings (initial load)
@@ -238,7 +235,7 @@ export default function LandingScreen() {
     }
   };
 
-  // Initial load
+  // Initial load**
   useEffect(() => {
     fetchListings(null, false);
   }, []);
@@ -261,14 +258,13 @@ export default function LandingScreen() {
         id: listing.id,
         price: listing.price,
         title: listing.title,
-        imageUrl: listing.thumbnail_url,
         description: listing.description,
         listing_type_id: listing.listing_type_id.toString(),
         time_updated: listing.time_updated,
         region_id: listing.region_id.toString(),
         condition: listing.condition,
         offering_uid: listing.offering_uid,
-        other_images: listing.other_images ? JSON.stringify(listing.other_images) : null,
+        listing_images: listing.listing_images ? JSON.stringify(listing.listing_images) : null,
       },
     });
   }, []);
