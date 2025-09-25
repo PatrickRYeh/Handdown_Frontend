@@ -316,6 +316,13 @@ export default function LandingScreen() {
         </View>
       </Appbar.Header>
 
+      {/* Show loading message when initially loading */}
+      {loading && listings.length === 0 && (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading listings...</Text>
+        </View>
+      )}
+
       <FlatList
         data={listings}
         renderItem={renderItem}
@@ -408,5 +415,17 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 14,
     color: '#666',
+  },
+  // Loading display styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });

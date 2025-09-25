@@ -28,6 +28,7 @@ interface Listing {
   tags: { tag_name: string }[] | null;
 }
 
+// interface for the listing items, currently has no interactivity
 interface ListingItemProps {
   listing: Listing;
   onPress: () => void;
@@ -56,10 +57,12 @@ const ListingItem: React.FC<ListingItemProps> = ({ listing, onPress, onEdit, onD
             style={styles.listingImage}
             resizeMode="cover"
           />
+          // else, show a placeholder
         ) : (
           <View style={styles.imagePlaceholder} />
         )}
         
+        {/* Display listing info */}
         <View style={styles.listingInfo}>
           <Text style={styles.listingTitle}>{listing.title}</Text>
           <Text style={styles.listingSubtitle}>
@@ -90,7 +93,7 @@ export default function YourListingsScreen() {
   const [loading, setLoading] = useState<boolean>(false);
   const [count, setCount] = useState<number>(0);
 
-  // Constants for API call
+  // Constants for API call will change later to be dynamic and get from cache
   const profileId = "51e242d0-e313-47f8-a881-27bba664a57b";
   const schemaName = "ucberkeley";
 
@@ -98,6 +101,7 @@ export default function YourListingsScreen() {
   const fetchProfileListings = async () => {
     if (loading) return; // Prevent duplicate requests
     
+    // sets loading to be true so that can display when loading
     setLoading(true);
     try {
       const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -160,10 +164,24 @@ export default function YourListingsScreen() {
     console.log('Listing pressed:', listingId);
   };
 
-  const handleEditListing = (listingId: string) => {
+  const handleEditListing = (listing: Listing) => {
     router.push({
       pathname: '/update_listing',
-      params: { id: listingId }
+      params: {
+        id: listing.id,
+        title: listing.title,
+        description: listing.description,
+        price: listing.price.replace('$', ''), // Remove $ sign for editing
+        condition: listing.condition,
+        listing_type_id: listing.listing_type_id.toString(),
+        thumbnail_url: listing.thumbnail_url,
+        time_created: listing.time_created,
+        time_updated: listing.time_updated,
+        region_id: listing.region_id.toString(),
+        offering_uid: listing.offering_uid,
+        listing_images: listing.listing_images ? JSON.stringify(listing.listing_images) : null,
+        tags: listing.tags ? JSON.stringify(listing.tags) : null,
+      }
     });
   };
 
@@ -223,7 +241,7 @@ export default function YourListingsScreen() {
               key={listing.id}
               listing={listing}
               onPress={() => handleListingPress(listing.id)}
-              onEdit={() => handleEditListing(listing.id)}
+              onEdit={() => handleEditListing(listing)}
               onDelete={() => handleDeleteListing(listing.id)}
             />
           ))}

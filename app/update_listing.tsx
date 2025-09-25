@@ -6,7 +6,8 @@
  * Pre-fills form with existing listing data and tracks changes.
  *
  * Notes
- * - Fetches existing listing data by ID from URL params
+ * - Uses passed parameters from Your_Listings.tsx for immediate loading
+ * - Falls back to API fetch if accessed directly
  * - Only sends changed fields to API endpoints
  * - Separate API calls for basic info and images
  */
@@ -123,6 +124,7 @@ export default function UpdateListingScreen() {
   // Original data for change tracking
   const [originalData, setOriginalData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   // Field-level error messages
   type FormErrors = Partial<{
@@ -136,51 +138,116 @@ export default function UpdateListingScreen() {
   }>;
   const [errors, setErrors] = useState<FormErrors>({});
 
-  // Fetch existing listing data
+  // Load listing data - runs once on component mount
   useEffect(() => {
-    const fetchListingData = async () => {
+    if (dataLoaded) return; // Prevent multiple loads
+    
+    const loadListingData = async () => {
       if (!listingId) return;
       
       setLoading(true);
+      
       try {
-        const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-        const res = await fetch(`${backendUrl}/listings/${listingId}`, {
-          headers: { Accept: 'application/json' }
-        });
-        
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        const data = await res.json();
-        
-        // Store original data for change tracking
-        setOriginalData(data);
-        
-        // Pre-fill form fields
-        setTitle(data.title || '');
-        setDescription(data.description || '');
-        setPrice(data.price ? String(data.price) : '');
-        setConditionValue(data.condition || '');
-        setCategoryValue(data.listing_type_id || null);
-        setLocation(data.location || 'Sample Location');
-        
-        // Pre-fill images if available
-        const existingImages = [];
-        if (data.thumbnail_url) existingImages.push(data.thumbnail_url);
-        if (data.other_images && Array.isArray(data.other_images)) {
-          existingImages.push(...data.other_images);
+        // Check if we have data passed from Your_Listings.tsx
+        if (params.title) {
+          console.log('Loading from params...');
+          
+          // Parse listing images if they exist
+          let listingImages = null;
+          let tags = null;
+          
+          try {
+            listingImages = params.listing_images ? JSON.parse(params.listing_images as string) : null;
+            tags = params.tags ? JSON.parse(params.tags as string) : null;
+          } catch (parseError) {
+            console.warn('Error parsing params:', parseError);
+          }
+          
+          // Create data object from params
+          const data = {
+            listing_id: params.id,
+            title: params.title as string,
+            description: params.description as string,
+            price: params.price ? Number(params.price) : null,
+            condition: params.condition as string,
+            listing_type_id: params.listing_type_id ? Number(params.listing_type_id) : null,
+            thumbnail_url: params.thumbnail_url as string,
+            time_created: params.time_created as string,
+            time_updated: params.time_updated as string,
+            region_id: params.region_id ? Number(params.region_id) : null,
+            offering_uid: params.offering_uid as string,
+            listing_images: listingImages,
+            tags: tags,
+          };
+          
+          // Store original data for change tracking
+          setOriginalData(data);
+          
+          // Pre-fill form fields
+          setTitle(data.title || '');
+          setDescription(data.description || '');
+          setPrice(data.price ? String(data.price) : '');
+          setConditionValue(data.condition || '');
+          setCategoryValue(data.listing_type_id || null);
+          setLocation('Sample Location'); // TODO: Get from API or params
+          
+          // Pre-fill images if available
+          const existingImages: string[] = [];
+          if (data.thumbnail_url) existingImages.push(data.thumbnail_url);
+          if (data.listing_images && Array.isArray(data.listing_images)) {
+            existingImages.push(...data.listing_images.map((img: any) => img.image_url));
+          }
+          setImages(existingImages);
+          
+          console.log('Data loaded from params successfully');
+        } else {
+          // No params data, fetch from API
+          console.log('No params data, fetching from API...');
+          await fetchFromAPI();
         }
-        setImages(existingImages);
-        
       } catch (error) {
-        console.error('Error fetching listing data:', error);
+        console.error('Error loading listing data:', error);
         alert('Failed to load listing data. Please try again.');
         router.back();
       } finally {
         setLoading(false);
+        setDataLoaded(true);
       }
     };
 
-    fetchListingData();
-  }, [listingId]);
+    const fetchFromAPI = async () => {
+      const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+      const res = await fetch(`${backendUrl}/listings/${listingId}`, {
+        headers: { Accept: 'application/json' }
+      });
+      
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const data = await res.json();
+      
+      // Store original data for change tracking
+      setOriginalData(data);
+      
+      // Pre-fill form fields
+      setTitle(data.title || '');
+      setDescription(data.description || '');
+      setPrice(data.price ? String(data.price) : '');
+      setConditionValue(data.condition || '');
+      setCategoryValue(data.listing_type_id || null);
+      setLocation(data.location || 'Sample Location');
+      
+      // Pre-fill images if available
+      const existingImages: string[] = [];
+      if (data.thumbnail_url) existingImages.push(data.thumbnail_url);
+      if (data.other_images && Array.isArray(data.other_images)) {
+        existingImages.push(...data.other_images);
+      }
+      setImages(existingImages);
+      
+      console.log('Data loaded from API successfully');
+    };
+
+    loadListingData();
+  }, []); // Empty dependency array - only runs once
 
   // Image picker: requests permission, allows selecting up to 10 images
   const handlePickImages = async () => {
@@ -239,7 +306,7 @@ export default function UpdateListingScreen() {
   const getImageChanges = () => {
     if (!originalData) return { hasChanges: false, newImages: [] };
     
-    const originalImages = [];
+    const originalImages: string[] = [];
     if (originalData.thumbnail_url) originalImages.push(originalData.thumbnail_url);
     if (originalData.other_images && Array.isArray(originalData.other_images)) {
       originalImages.push(...originalData.other_images);
@@ -334,7 +401,7 @@ export default function UpdateListingScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
-        <Text>Loading listing data...</Text>
+        <Text style={styles.loadingText}>Loading listing data...</Text>
       </View>
     );
   }
@@ -467,6 +534,11 @@ const styles = StyleSheet.create({
   loadingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   headerRight: {
     flexDirection: 'row',
