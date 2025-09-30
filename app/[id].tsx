@@ -8,7 +8,7 @@
  */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { IconButton, Surface, useTheme } from 'react-native-paper';
 
@@ -32,6 +32,51 @@ interface ListingDetailParams {
   condition: string;
   offering_uid: string;
   listing_images: string; // JSON string of image array or null
+}
+
+/**
+ * Profile data structure returned from the backend API
+ * Represents a user's profile information including personal details,
+ * university info, and location data
+ */
+interface ProfileData {
+  uid: string;
+  email: string;
+  fname: string;
+  lname: string;
+  profile_pic_url: string;
+  university_student_id: string;
+  role_id: number;
+  campus_region: {
+    region_name: string;
+  };
+  class_year: {
+    class_year: string;
+  };
+}
+
+/**
+ * API response structure for profile endpoint
+ * Contains the profile data array and success message
+ * Matches the exact structure provided by the backend
+ */
+interface ProfileApiResponse {
+  message: string;
+  profile: Array<{
+    uid: string;
+    email: string;
+    fname: string;
+    lname: string;
+    profile_pic_url: string;
+    university_student_id: string;
+    role_id: number;
+    campus_region: {
+      region_name: string;
+    };
+    class_year: {
+      class_year: string;
+    };
+  }>;
 }
 
 export default function ListingDetailScreen() {
@@ -87,6 +132,90 @@ export default function ListingDetailScreen() {
   const [message, setMessage] = useState("Still selling? I'm interested :)");
   // Ref to the horizontal FlatList (carousel)
   const flatListRef = useRef<FlatList>(null);
+
+  // Profile data state management
+  // Stores the seller's profile information fetched from the backend
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  // Loading state to show spinner/placeholder while fetching profile data
+  const [profileLoading, setProfileLoading] = useState(false);
+  // Error state to handle and display API errors
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  /**
+   * Fetches profile data from the backend API for the listing's seller
+   * Uses the offering_uid from the listing params to get the correct seller's profile
+   * Follows the same pattern as Your_Listings.tsx for API endpoint structure
+   * 
+   * @param profileId - The unique identifier for the user profile (uses offering_uid from listing)
+   * @param schemaName - The database schema name (defaults to "ucberkeley")
+   */
+  const fetchProfile = async (
+    profileId: string,
+    schemaName: string = "ucberkeley"
+  ) => {
+    // Prevent duplicate requests if already loading
+    if (profileLoading) return;
+    
+    setProfileLoading(true);
+    setProfileError(null);
+    
+    try {
+      // Get the backend URL from environment variables (same as index.tsx pattern)
+      const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+      
+      // Construct the API endpoint URL with correct structure: /profile-page/{profile_id}?schema_name={schema_name}
+      const apiUrl = `${backendUrl}/profile-page/${profileId}?schema_name=${schemaName}`;
+      
+      // Make the API request with proper headers
+      const response = await fetch(apiUrl, {
+        headers: { 
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      // Check if the response is successful
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}: Failed to fetch profile`);
+      }
+      
+      // Parse the JSON response
+      const data: ProfileApiResponse = await response.json();
+      
+      // Extract the first profile from the response array
+      // The API returns an array, but we expect only one profile
+      if (data.profile && data.profile.length > 0) {
+        setProfileData(data.profile[0]);
+      } else {
+        throw new Error('No profile data found in response');
+      }
+      
+    } catch (error) {
+      // Handle any errors that occurred during the fetch
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setProfileError(errorMessage);
+      console.error('Error fetching profile:', errorMessage);
+    } finally {
+      // Always set loading to false when request completes
+      setProfileLoading(false);
+    }
+  };
+
+  /**
+   * Effect hook to fetch profile data immediately when component mounts
+   * Runs when the component is first rendered and when offering_uid changes
+   * Uses the offering_uid from the listing params to get the seller's profile
+   */
+  useEffect(() => {
+    // Only fetch profile if offering_uid is available
+    if (offering_uid && typeof offering_uid === 'string') {
+      fetchProfile(offering_uid);
+    } else {
+      // Set error state if offering_uid is missing
+      setProfileError('No seller ID available for this listing');
+      console.warn('offering_uid is missing or invalid:', offering_uid);
+    }
+  }, [offering_uid]); // Re-run if offering_uid changes
 
   // Send composed message — wire up to chat backend later
   const handleSend = () => {
@@ -201,19 +330,54 @@ export default function ListingDetailScreen() {
             ))}
           </View>
         </Surface>
-        {/* Seller card with map placeholder and basic seller info */}
+        {/* Seller card with map placeholder and dynamic seller info */}
         <Surface style={styles.sellerCard} elevation={1}>
           <View style={styles.mapContainer}>
-            <View style={styles.mapPlaceholder}>
-              <MaterialCommunityIcons name="map-marker" size={24} color={theme.colors.primary} />
-            </View>
+            {/* Profile picture or map placeholder */}
+            {profileData?.profile_pic_url ? (
+              <Image
+                source={{ uri: profileData.profile_pic_url }}
+                style={styles.profileImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.mapPlaceholder}>
+                <MaterialCommunityIcons name="map-marker" size={24} color={theme.colors.primary} />
+              </View>
+            )}
           </View>
           <View style={styles.sellerInfo}>
-            <Text style={styles.sellerName}>David</Text>
-            <Text style={styles.sellerDetail}>Junior • Data Science</Text>
-            <Text style={styles.sellerRating}>⭐⭐⭐⭐</Text>
-            {/* MAKE INTO LISTING LOCATION */}
-            <Text style={styles.location}>Southside, Berkeley</Text>
+            {/* Display seller name from profile data or loading/error state */}
+            {profileLoading ? (
+              <Text style={styles.sellerName}>Loading profile...</Text>
+            ) : profileError ? (
+              <Text style={styles.sellerName}>Error loading profile</Text>
+            ) : profileData ? (
+              <>
+                {/* Full name from profile data */}
+                <Text style={styles.sellerName}>
+                  {profileData.fname} {profileData.lname}
+                </Text>
+                {/* Class year and role information */}
+                <Text style={styles.sellerDetail}>
+                  {profileData.class_year?.class_year || 'Student'} • Role ID: {profileData.role_id}
+                </Text>
+                {/* Placeholder rating - TODO: implement actual rating system */}
+                <Text style={styles.sellerRating}>⭐⭐⭐⭐</Text>
+                {/* Campus region from profile data */}
+                <Text style={styles.location}>
+                  {profileData.campus_region?.region_name || 'Campus Location'}
+                </Text>
+              </>
+            ) : (
+              <>
+                {/* Loading state while profile data is being fetched */}
+                <Text style={styles.sellerName}>Loading seller info...</Text>
+                <Text style={styles.sellerDetail}>Fetching profile data...</Text>
+                <Text style={styles.sellerRating}>⭐⭐⭐⭐</Text>
+                <Text style={styles.location}>Campus Location</Text>
+              </>
+            )}
           </View>
         </Surface>
       </ScrollView>
@@ -332,6 +496,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // Profile image styling - matches map placeholder dimensions
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
   },
   // Seller info column on the right
   sellerInfo: {
