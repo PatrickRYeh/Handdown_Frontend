@@ -163,7 +163,12 @@ export default function LandingScreen() {
       );
       
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-      const data = await res.json();
+      
+      // Destructure the new response structure
+      const { message, data, count } = await res.json();
+      const listings = data.listings; // Array of listings
+      const lastTimeFromResponse = data.last_time; // For pagination
+      const totalCount = count; // Total number of listings
 
       interface ApiListing {
         listing_id: string;
@@ -182,10 +187,10 @@ export default function LandingScreen() {
       /**
          * mappedListing is a variable to store the transformed data
          * Listing[] initializes an empty array of listings in specified format
-         * data.listings extracts the listings data from the response, ?? means if it's null, then use an empty array
+         * listings extracts the listings data from the response, ?? means if it's null, then use an empty array
          * .map() is a function that transforms each item in the array into a new format
          */
-      const mappedListings: Listing[] = (data.listings ?? []).map((item: ApiListing) => {
+      const mappedListings: Listing[] = (listings ?? []).map((item: ApiListing) => {
         // Sort images by position and get the first one for thumbnail
         const sortedImages = item.listing_images 
           ? [...item.listing_images].sort((a, b) => a.position - b.position)
@@ -223,10 +228,10 @@ export default function LandingScreen() {
         setListings(mappedListings);
       }
       
-      // Update lastTime with the time_updated from the last listing
-      if (mappedListings.length > 0) {
-        const lastListing = mappedListings[mappedListings.length - 1];
-        setLastTime(lastListing.time_updated);
+      // Update lastTime with the last_time from the API response
+      // This is more reliable than calculating it from the last listing
+      if (lastTimeFromResponse) {
+        setLastTime(lastTimeFromResponse);
       }
     } catch (err) {
       console.error(err);

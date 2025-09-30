@@ -111,13 +111,14 @@ export default function YourListingsScreen() {
       );
       
       if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-      const result = await response.json();
       
-      // Destructure the response as specified
-      const { message, listings: apiListings, count: listingCount } = result;
+      // Destructure the new response structure
+      const { message, data, count } = await response.json();
+      const listings = data; // Array of listings
+      const totalCount = count; // Total number of listings
       
       // Transform API data to match our Listing interface
-      const mappedListings: Listing[] = (apiListings ?? []).map((item: any) => {
+      const mappedListings: Listing[] = (listings ?? []).map((item: any) => {
         // Sort images by position and get the first one for thumbnail
         const sortedImages = item.listing_images 
           ? [...item.listing_images].sort((a: any, b: any) => a.position - b.position)
@@ -145,7 +146,7 @@ export default function YourListingsScreen() {
       });
       
       setListings(mappedListings);
-      setCount(listingCount);
+      setCount(totalCount);
       
     } catch (err) {
       console.error('Error fetching profile listings:', err);

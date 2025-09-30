@@ -58,11 +58,11 @@ interface ProfileData {
 /**
  * API response structure for profile endpoint
  * Contains the profile data array and success message
- * Matches the exact structure provided by the backend
+ * Matches the new structure provided by the backend
  */
 interface ProfileApiResponse {
   message: string;
-  profile: Array<{
+  data: Array<{
     uid: string;
     email: string;
     fname: string;
@@ -77,6 +77,7 @@ interface ProfileApiResponse {
       class_year: string;
     };
   }>;
+  count: number;
 }
 
 export default function ListingDetailScreen() {
@@ -179,13 +180,14 @@ export default function ListingDetailScreen() {
         throw new Error(`HTTP error ${response.status}: Failed to fetch profile`);
       }
       
-      // Parse the JSON response
-      const data: ProfileApiResponse = await response.json();
+      // Destructure the new response structure
+      const { message, data, count }: ProfileApiResponse = await response.json();
+      const profile = data[0]; // Profile data is in an array
       
       // Extract the first profile from the response array
       // The API returns an array, but we expect only one profile
-      if (data.profile && data.profile.length > 0) {
-        setProfileData(data.profile[0]);
+      if (data && data.length > 0) {
+        setProfileData(profile);
       } else {
         throw new Error('No profile data found in response');
       }
