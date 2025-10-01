@@ -11,6 +11,7 @@
  * - Only sends changed fields to API endpoints
  * - Separate API calls for basic info and images
  */
+import { Ionicons } from '@expo/vector-icons';
 import { launchImageLibraryAsync, MediaTypeOptions, requestMediaLibraryPermissionsAsync } from 'expo-image-picker';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -319,79 +320,25 @@ export default function UpdateListingScreen() {
     return { hasChanges, newImages: images };
   };
 
-  // Submit form: Updates only changed fields
+  // Submit form: For now, just validate and navigate back
   const handleUpdate = async () => {
     if (!validateForm()) return;
 
     const changedFields = getChangedFields();
     const imageChanges = getImageChanges();
     
-    // If nothing changed, just go back
-    if (Object.keys(changedFields).length === 0 && !imageChanges.hasChanges) {
-      router.push('/Your_Listings');
-      return;
+    // Show what would be updated (for development purposes)
+    if (Object.keys(changedFields).length > 0) {
+      console.log('Fields that would be updated:', changedFields);
     }
-
-    try {
-      const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-      
-      // Update basic info if there are changes
-      if (Object.keys(changedFields).length > 0) {
-        const res = await fetch(
-          `${backendUrl}/listings/update-listing-basic-info/${listingId}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: JSON.stringify(changedFields)
-          }
-        );
-        
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        const data = await res.json();
-        console.log("Update basic info response:", data.message);
-      }
-      
-      // Update images if there are changes
-      if (imageChanges.hasChanges) {
-        const formData = new FormData();
-        
-        // Add new images to FormData
-        for (let i = 0; i < imageChanges.newImages.length; i++) {
-          const imageUri = imageChanges.newImages[i];
-          
-          // Only add new images (not existing URLs)
-          if (imageUri.startsWith('file://') || imageUri.startsWith('content://')) {
-            const response = await fetch(imageUri);
-            const blob = await response.blob();
-            const filename = `IMG_${Date.now()}_${i}.JPG`;
-            formData.append('images', blob, filename);
-          }
-        }
-        
-        const res = await fetch(
-          `${backendUrl}/listings/update-listing-images/${listingId}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Accept': 'application/json',
-            },
-            body: formData
-          }
-        );
-        
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        const data = await res.json();
-        console.log("Update images response:", data.message);
-      }
-      
-      router.push('/Your_Listings');
-    } catch (error) {
-      console.error('Error updating listing:', error);
-      alert('Failed to update listing. Please try again.');
+    
+    if (imageChanges.hasChanges) {
+      console.log('Images that would be updated:', imageChanges.newImages.length, 'images');
     }
+    
+    // For now, just navigate back without making API calls
+    console.log('Update functionality will be implemented later');
+    router.push('/Your_Listings');
   };
 
   const handleCancel = () => {
@@ -411,6 +358,16 @@ export default function UpdateListingScreen() {
       <Stack.Screen 
         options={{
           title: 'Edit Listing',
+          headerLeft: () => (
+            <Pressable
+              style={styles.backButton}
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="chevron-back" size={24} color="#8B5CF6" />
+            </Pressable>
+          ),
           headerRight: () => (
             <View style={styles.headerRight}>
               <IconButton icon="magnify" size={24} />
@@ -542,6 +499,9 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     flexDirection: 'row',
+  },
+  backButton: {
+    padding: 8,
   },
   photoPickerArea: {
     height: 200,

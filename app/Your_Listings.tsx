@@ -5,11 +5,10 @@
  * Shows listing items with images, titles, price, and date created.
  * Matches the design with back navigation and clean list layout.
  */
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { IconButton } from 'react-native-paper';
 
 // Interface for listing data structure (matching the API response)
 interface Listing {
@@ -202,12 +201,14 @@ export default function YourListingsScreen() {
           },
           headerShadowVisible: false,
           headerLeft: () => (
-            <IconButton
-              icon="arrow-left"
-              size={24}
-              iconColor="#666"
+            <Pressable
+              style={styles.backButton}
               onPress={() => router.back()}
-            />
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="chevron-back" size={24} color="#8B5CF6" />
+            </Pressable>
           ),
         }}
       />
@@ -334,5 +335,8 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 8,
     marginLeft: 4,
+  },
+  backButton: {
+    padding: 8,
   },
 });

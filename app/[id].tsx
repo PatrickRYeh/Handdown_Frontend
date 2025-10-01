@@ -6,10 +6,10 @@
  * info card with a map placeholder. Navigation params provide the listing's
  * id, price, and description. Image data and chat backend are stubbed.
  */
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Dimensions, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { IconButton, Surface, useTheme } from 'react-native-paper';
 
 // Viewport width used to size the full-bleed carousel slides
@@ -259,11 +259,14 @@ export default function ListingDetailScreen() {
       <Stack.Screen
         options={{
           headerLeft: () => (
-            <IconButton
-              icon="arrow-left"
-              size={24}
+            <Pressable
+              style={styles.backButton}
               onPress={() => router.back()}
-            />
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="chevron-back" size={24} color="#8B5CF6" />
+            </Pressable>
           ),
           headerRight: () => (
             <View style={styles.headerRight}>
@@ -527,5 +530,9 @@ const styles = StyleSheet.create({
   // Subtle location text
   location: {
     color: '#666',
+  },
+  // Back button styling
+  backButton: {
+    padding: 8,
   },
 }); 
