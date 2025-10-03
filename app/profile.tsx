@@ -21,13 +21,16 @@ interface ProfileData {
   lname: string;
   profile_pic_url: string;
   university_student_id: string;
-  role_id: number;
-  campus_region: {
-    region_name: string;
-  };
-  class_year: {
-    class_year: string;
-  };
+  role_id: number | null;
+  major_id: number;
+  major_name: string;
+  region_id: number;
+  campus_region: string;
+  rating: number | null;
+  entry_year: number;
+  class_year: number;
+  time_created: string;
+  time_updated: string;
 }
 
 /**
@@ -44,13 +47,16 @@ interface ProfileApiResponse {
     lname: string;
     profile_pic_url: string;
     university_student_id: string;
-    role_id: number;
-    campus_region: {
-      region_name: string;
-    };
-    class_year: {
-      class_year: string;
-    };
+    role_id: number | null;
+    major_id: number;
+    major_name: string;
+    region_id: number;
+    campus_region: string;
+    rating: number | null;
+    entry_year: number;
+    class_year: number;
+    time_created: string;
+    time_updated: string;
   }>;
   count: number;
 }
@@ -227,7 +233,7 @@ export default function ProfileScreen() {
                     {profileData.fname} {profileData.lname}
                   </Text>
                   <Text style={styles.profileSubtitle}>
-                    {profileData.class_year.class_year} - {profileData.campus_region.region_name}
+                    {profileData.class_year} - {profileData.major_name}
                   </Text>
                 </>
               ) : (
@@ -246,7 +252,7 @@ export default function ProfileScreen() {
           <ListRow
             iconName="location"
             label="Location"
-            subtitle={profileData ? profileData.campus_region.region_name : undefined}
+            subtitle={profileData ? profileData.campus_region : undefined}
             onPress={() => {}}
           />
           <ListRow
