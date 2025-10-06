@@ -19,6 +19,54 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PLACEHOLDER_IMAGES = Array(4).fill(null);
 
 /**
+ * Maps integer class year values to their string representations
+ * @param classYear - The integer class year (1-5)
+ * @returns The corresponding string representation
+ */
+function getClassYearString(classYear: number): string {
+  const classYearMap: { [key: number]: string } = {
+    1: "Freshman",
+    2: "Sophomore", 
+    3: "Junior",
+    4: "Senior",
+    5: "Senior"
+  };
+  
+  return classYearMap[classYear] || "Unknown";
+}
+
+/**
+ * Maps rating value to star display string with half stars
+ * @param rating - The rating value (0-5, can be null)
+ * @returns The corresponding star string representation with half stars
+ */
+function getRatingStars(rating: number | null): string {
+  if (rating === null || rating === undefined) {
+    return "No rating"; // Default for null ratings
+  }
+  
+  // Clamp rating between 0 and 5
+  const clampedRating = Math.max(0, Math.min(5, rating));
+  
+  // Round to nearest half star (0, 0.5, 1.0, 1.5, 2.0, etc.)
+  const roundedRating = Math.round(clampedRating * 2) / 2;
+  
+  const fullStars = Math.floor(roundedRating);
+  const hasHalfStar = roundedRating % 1 === 0.5;
+  
+  let stars = "";
+  for (let i = 0; i < fullStars; i++) {
+    stars += "⭐";
+  }
+  if (hasHalfStar) {
+    stars += "⭐"; // Half star emoji
+  }
+  
+  // If no stars, show "No rating"
+  return stars || "No rating";
+}
+
+/**
  * Route params expected for this screen. Extend when image collection is added.
  */
 interface ListingDetailParams {
@@ -46,13 +94,16 @@ interface ProfileData {
   lname: string;
   profile_pic_url: string;
   university_student_id: string;
-  role_id: number;
-  campus_region: {
-    region_name: string;
-  };
-  class_year: {
-    class_year: string;
-  };
+  role_id: number | null;
+  major_id: number;
+  major_name: string;
+  region_id: number;
+  campus_region: string;
+  rating: number | null;
+  entry_year: number;
+  class_year: number;
+  time_created: string;
+  time_updated: string;
 }
 
 /**
@@ -69,13 +120,16 @@ interface ProfileApiResponse {
     lname: string;
     profile_pic_url: string;
     university_student_id: string;
-    role_id: number;
-    campus_region: {
-      region_name: string;
-    };
-    class_year: {
-      class_year: string;
-    };
+    role_id: number | null;
+    major_id: number;
+    major_name: string;
+    region_id: number;
+    campus_region: string;
+    rating: number | null;
+    entry_year: number;
+    class_year: number;
+    time_created: string;
+    time_updated: string;
   }>;
   count: number;
 }
@@ -363,15 +417,17 @@ export default function ListingDetailScreen() {
                 <Text style={styles.sellerName}>
                   {profileData.fname} {profileData.lname}
                 </Text>
-                {/* Class year and role information */}
+                {/* Class year and major information */}
                 <Text style={styles.sellerDetail}>
-                  {profileData.class_year?.class_year || 'Student'} • Role ID: {profileData.role_id}
+                  {getClassYearString(profileData.class_year)} • {profileData.major_name}
                 </Text>
-                {/* Placeholder rating - TODO: implement actual rating system */}
-                <Text style={styles.sellerRating}>⭐⭐⭐⭐</Text>
+                {/* Seller rating from profile data */}
+                <Text style={styles.sellerRating}>
+                  {getRatingStars(profileData.rating)}
+                </Text>
                 {/* Campus region from profile data */}
                 <Text style={styles.location}>
-                  {profileData.campus_region?.region_name || 'Campus Location'}
+                  {profileData.campus_region || 'Campus Location'}
                 </Text>
               </>
             ) : (
@@ -379,7 +435,7 @@ export default function ListingDetailScreen() {
                 {/* Loading state while profile data is being fetched */}
                 <Text style={styles.sellerName}>Loading seller info...</Text>
                 <Text style={styles.sellerDetail}>Fetching profile data...</Text>
-                <Text style={styles.sellerRating}>⭐⭐⭐⭐</Text>
+                <Text style={styles.sellerRating}>Loading rating...</Text>
                 <Text style={styles.location}>Campus Location</Text>
               </>
             )}

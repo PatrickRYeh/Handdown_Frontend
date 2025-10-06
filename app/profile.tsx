@@ -61,6 +61,23 @@ interface ProfileApiResponse {
   count: number;
 }
 
+/**
+ * Maps integer class year values to their string representations
+ * @param classYear - The integer class year (1-5)
+ * @returns The corresponding string representation
+ */
+function getClassYearString(classYear: number): string {
+  const classYearMap: { [key: number]: string } = {
+    1: "Freshman",
+    2: "Sophomore", 
+    3: "Junior",
+    4: "Senior",
+    5: "Senior"
+  };
+  
+  return classYearMap[classYear] || "Unknown";
+}
+
 // Reusable ListRow component
 interface ListRowProps {
   iconName: keyof typeof Ionicons.glyphMap;
@@ -233,7 +250,7 @@ export default function ProfileScreen() {
                     {profileData.fname} {profileData.lname}
                   </Text>
                   <Text style={styles.profileSubtitle}>
-                    {profileData.class_year} - {profileData.major_name}
+                    {getClassYearString(profileData.class_year)} - {profileData.major_name}
                   </Text>
                 </>
               ) : (
