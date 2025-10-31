@@ -1,50 +1,77 @@
-# Welcome to your Expo app 👋
+# Handdown Frontend 📱
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Handdown is a marketplace app for college students to buy and sell items within their campus community. This is the frontend mobile application built with React Native and Expo.
 
-## Get started
+## What You Need Before Starting
 
-1. Install dependencies
+Before you can run this app, make sure you have these installed on your computer:
 
-   ```bash
-   npm install
-   ```
+- **Node.js** (version 16 or higher) - [Download here](https://nodejs.org/)
+- **npm** (comes with Node.js)
+- A **web browser** (Chrome, Safari, Firefox, etc.)
+- **Terminal/Command Prompt** access
 
-2. Start the app
+## Quick Setup Guide
 
-   ```bash
-   npx expo start
-   ```
+### Step 1: Install Dependencies
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+First, open your terminal and navigate to this project folder, then install all the required packages:
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+*This downloads all the code libraries the app needs to work.*
 
-## Learn more
+### Step 2: Set Up API Connection
 
-To learn more about developing your project with Expo, look at the following resources:
+The app needs to connect to a backend server to get listing data. You need to create a configuration file:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+1. **Create a file** called `.env` in this project folder (same level as this README)
 
-## Join the community
+2. **Find your computer's IP address:**
+   - **On Mac/Linux:** Open Terminal and type `ifconfig`, then look for `en0` and copy the IP address
+   - **On Windows:** Open Command Prompt and type `ipconfig`, then look for your local IP address
 
-Join our community of developers creating universal apps.
+3. **Add this line to your `.env` file:**
+   ```
+   EXPO_PUBLIC_API_BASE_URL=http://YOUR_IP_ADDRESS:8000
+   ```
+   
+   Replace `YOUR_IP_ADDRESS` with the IP you found. For example:
+   ```
+   EXPO_PUBLIC_API_BASE_URL=http://192.168.1.100:8000
+   ```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+*This tells the app where to find the backend server that has all the listing data.*
+
+### Step 3: Start the App
+
+Make sure your backend API server is running first, then start the frontend:
+
+```bash
+npm start
+```
+
+You will then be direct to a variety of options. The main ones to use: 
+- for convenience: press w for web
+- for real testing: scan the QR code with your phone camera, this will run the app on the expo go app proxy (please install on app store)
+
+## What You'll See
+
+- **Home Tab:** Browse all available listings
+- **Nearby Tab:** See items near your location  
+- **Moving Tab:** Items from students who are moving
+- **Chats Tab:** Message other users about items
+- **Create Listing:** Post your own items for sale
+
+## Common Issues & Solutions
+
+**Problem:** "Cannot connect to server" or listings don't load
+- **Solution:** Make sure your backend API is running and your IP address in `.env` is correct
+
+**Problem:** App won't start or shows errors
+- **Solution:** Try deleting `node_modules` folder and running `npm install` again
+
+**Problem:** Images don't display
+- **Solution:** Check that your backend server is serving images correctly
