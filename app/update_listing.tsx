@@ -320,9 +320,13 @@ export default function UpdateListingScreen() {
     return { hasChanges, newImages: images };
   };
 
-  // Submit form: Updates listing via API then navigates back
+  // Submit form: Updates listing via API call
   const handleUpdate = async () => {
     if (!validateForm()) return;
+    if (!listingId) {
+      alert('Listing ID is missing. Please try again.');
+      return;
+    }
 
     const changedFields = getChangedFields();
     const imageChanges = getImageChanges();
@@ -331,7 +335,7 @@ export default function UpdateListingScreen() {
     const updateData: any = {
       schema_name: "ucberkeley", // Required field
     };
-    
+
     // Add changed fields to the payload
     if (changedFields.title !== undefined) {
       updateData.title = changedFields.title;
@@ -346,57 +350,56 @@ export default function UpdateListingScreen() {
       updateData.condition = changedFields.condition;
     }
     if (changedFields.listing_type_id !== undefined) {
-      // Convert listing_type_id to tag_ids array format
-      updateData.tag_ids = [changedFields.listing_type_id];
+      // Convert single category value to tag_ids array
+      updateData.tag_ids = changedFields.listing_type_id ? [changedFields.listing_type_id] : [];
     }
     
-    // Include region_id from original data if available
+    // Add region_id if it exists in original data (or if location changed)
     if (originalData?.region_id) {
       updateData.region_id = originalData.region_id;
     }
-    
+
     try {
       const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
       
-      // TODO: For troubleshooting - using hardcoded listing_id
-      // Replace with listingId variable once working
-      const testListingId = "dfde45d2-be1c-4674-8591-bf1bda1402cb";
-      
-      // Log for troubleshooting
-      console.log('Update API URL:', `${backendUrl}/update-listing-basic-info/${testListingId}`);
-      console.log('Update payload:', JSON.stringify(updateData, null, 2));
-      
-      // Make the API call to update basic listing info
-      const response = await fetch(
-        `${backendUrl}/update-listing-basic-info/${testListingId}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify(updateData),
+      // Only make API call if there are actual changes
+      if (Object.keys(updateData).length > 1) { // More than just schema_name
+        const response = await fetch(
+          `${backendUrl}/listings/update-listing-basic-info/${listingId}`,
+          {
+            method: 'PUT',
+            headers: {
+              'accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updateData),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.message || `HTTP error ${response.status}: Failed to update listing`
+          );
         }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
+
+        const result = await response.json();
+        console.log('Listing updated successfully:', result);
+      } else {
+        console.log('No changes detected, skipping API call');
       }
-      
-      const data = await response.json();
-      console.log('Update listing response:', data);
-      
-      // TODO: Handle image updates separately if imageChanges.hasChanges is true
-      // This would require a separate API endpoint for updating images
+
+      // Note: Image updates would be handled separately if needed
       if (imageChanges.hasChanges) {
-        console.log('Note: Image updates are not yet implemented');
+        console.log('Image changes detected but not yet implemented');
       }
-      
+
       // Navigate back to listings page on success
       router.push('/Your_Listings');
     } catch (error) {
       console.error('Error updating listing:', error);
-      alert('Failed to update listing. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update listing. Please try again.';
+      alert(errorMessage);
     }
   };
 
