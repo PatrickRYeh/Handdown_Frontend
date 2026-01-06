@@ -8,7 +8,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 // Interface for listing data structure (matching the API response)
 interface Listing {
@@ -33,9 +33,10 @@ interface ListingItemProps {
   onPress: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  isDeleting: boolean;
 }
 
-const ListingItem: React.FC<ListingItemProps> = ({ listing, onPress, onEdit, onDelete }) => {
+const ListingItem: React.FC<ListingItemProps> = ({ listing, onPress, onEdit, onDelete, isDeleting }) => {
   // Format the date to be more readable
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -75,9 +76,15 @@ const ListingItem: React.FC<ListingItemProps> = ({ listing, onPress, onEdit, onD
           <Pressable style={styles.iconButton} onPress={onEdit}>
             <MaterialCommunityIcons name="pencil" size={20} color="#666" />
           </Pressable>
-          <Pressable style={styles.iconButton} onPress={onDelete}>
-            <MaterialCommunityIcons name="trash-can" size={20} color="#666" />
-          </Pressable>
+          {isDeleting ? (
+            <View style={styles.deletingIndicator}>
+              <ActivityIndicator size="small" color="#8B5CF6" />
+            </View>
+          ) : (
+            <Pressable style={styles.iconButton} onPress={onDelete} disabled={isDeleting}>
+              <MaterialCommunityIcons name="trash-can" size={20} color="#666" />
+            </Pressable>
+          )}
         </View>
       </View>
     </Pressable>
@@ -91,6 +98,7 @@ export default function YourListingsScreen() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [count, setCount] = useState<number>(0);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Constants for API call will change later to be dynamic and get from cache
   const profileId = "51e242d0-e313-47f8-a881-27bba664a57b";
@@ -185,9 +193,71 @@ export default function YourListingsScreen() {
     });
   };
 
+  const deleteListing = async (listingId: string) => {
+    const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+
+    if (!backendUrl) {
+      Alert.alert('Delete failed', 'API base URL is not configured.');
+      return;
+    }
+
+    try {
+      setDeletingId(listingId);
+
+      const response = await fetch(
+        `${backendUrl}/listings/${listingId}?schema_name=${schemaName}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData?.detail ?? errorMessage;
+        } catch {
+          // Ignore JSON parse errors
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Attempt to read the response body (if any) for messaging
+      let successMessage = 'Listing deleted successfully.';
+      try {
+        const data = await response.json();
+        successMessage = data?.message ?? successMessage;
+      } catch {
+        // Ignore JSON parse errors when no body is returned
+      }
+
+      setListings((prev) => prev.filter((listing) => listing.id !== listingId));
+      setCount((prev) => Math.max(prev - 1, 0));
+      Alert.alert('Success', successMessage);
+    } catch (err) {
+      console.error('Error deleting listing:', err);
+      Alert.alert('Delete failed', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleDeleteListing = (listingId: string) => {
-    // TODO: Show delete confirmation dialog
-    console.log('Delete listing:', listingId);
+    Alert.alert(
+      'Delete listing',
+      'Are you sure you want to delete this listing? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteListing(listingId),
+        },
+      ],
+    );
   };
 
   return (
@@ -245,6 +315,7 @@ export default function YourListingsScreen() {
               onPress={() => handleListingPress(listing.id)}
               onEdit={() => handleEditListing(listing)}
               onDelete={() => handleDeleteListing(listing.id)}
+              isDeleting={deletingId === listing.id}
             />
           ))}
         </View>
@@ -333,6 +404,10 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   iconButton: {
+    padding: 8,
+    marginLeft: 4,
+  },
+  deletingIndicator: {
     padding: 8,
     marginLeft: 4,
   },
