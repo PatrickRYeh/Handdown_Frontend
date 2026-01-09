@@ -128,17 +128,21 @@
 - Currently Expo starter content describing template features. Needs replacement with actual nearby listings map/feed.
 
 ### 3.10 Chats (`app/(tabs)/chats.tsx`)
-- **Purpose**: Central hub for all buyer-seller conversations initiated from listings.
+- **Purpose**: Central hub for all buyer-seller conversations initiated from listings. Displays conversations for both buyers and sellers in a unified list.
 - **Primary View: Conversations List**
-  - Displays all active conversations sorted by most recent message timestamp (descending).
-  - Each conversation row shows:
-    - Other participant's profile picture (or placeholder).
-    - Participant name (buyer sees seller name, seller sees buyer name).
-    - Associated listing thumbnail (if conversation started from a listing).
-    - Last message preview (truncated to ~50 chars) with timestamp (relative: "2m ago", "1h ago", "Yesterday", or absolute date if >7 days).
-    - Unread message indicator (badge count or visual dot) if any unread messages exist.
-  - Empty state: "No conversations yet. Start messaging sellers from listing pages!"
-  - Pull-to-refresh to sync latest messages.
+  - Displays all active conversations for the current user (both as buyer and as seller).
+  - **Sorting**: Conversations sorted by `last_message_timestamp` in descending order (most recent message first).
+  - **Each Chat Tile Display**:
+    - **Item Picture**: Thumbnail image of the listing item being discussed (if conversation is tied to a listing). Display as small square image (~60x60px or similar). If no listing associated, show placeholder icon.
+    - **Participant Names**: Full name(s) of the other participant(s) in the conversation. For buyer-seller conversations, shows the other party's name (buyer sees seller name, seller sees buyer name). Display as primary text element.
+    - **Last Message Time**: Timestamp of the most recent message sent in the conversation. Format as relative time ("2m ago", "1h ago", "Yesterday") for recent messages, or absolute date format ("Jan 15") for older messages (>7 days).
+    - **Optional Additional Elements**:
+      - Last message preview text (truncated to ~50 chars) - can be added in future iteration.
+      - Unread message indicator (badge count or visual dot) if any unread messages exist.
+      - Other participant's profile picture/avatar (can be added in future iteration).
+  - **Empty State**: "No conversations yet. Start messaging sellers from listing pages!" with call-to-action.
+  - **Pull-to-Refresh**: Support pull-to-refresh gesture to sync latest conversations and message timestamps.
+  - **Loading State**: Show loading spinner or skeleton while fetching conversations.
 - **Conversation Detail View** (navigated from list row)
   - Header: Back button, participant name/avatar, listing context (optional link back to listing).
   - Message list: Scrollable, newest at bottom. Messages display:
@@ -206,10 +210,40 @@
   - Response data consumed by `Your_Listings`.
 
 ### 4.4 Chats/Messaging API
-- **GET `/chats/conversations?user_uid={uid}&schema_name=...`**
-  - Returns list of all conversations for the user.
-  - Response: `{ message, data: Conversation[], count }`.
-  - Each conversation includes last message preview and unread count.
+- **GET `/chats/conversations?user_uid={uid}&schema_name={schema_name}`**
+  - **Purpose**: Retrieves all conversations for a given user (both conversations where user is buyer and where user is seller).
+  - **Query Parameters**:
+    - `user_uid` (required, string): The unique identifier of the user requesting conversations.
+    - `schema_name` (required, string): Schema identifier (e.g., "ucberkeley").
+  - **Response Structure**:
+    ```
+    {
+      message: string,
+      data: Conversation[],
+      count: number
+    }
+    ```
+  - **Conversation Object Structure** (each item in `data` array):
+    ```
+    {
+      conversation_id: string,              // Unique identifier for the conversation
+      listing_id: string | null,             // ID of associated listing (null if not tied to a listing)
+      listing_title: string | null,          // Title of the listing (for display)
+      listing_thumbnail_url: string | null,   // URL of the listing's thumbnail image (REQUIRED for chat tile display)
+      other_participant_uid: string,         // UID of the other participant (buyer or seller)
+      other_participant_name: string,        // Full name of other participant (REQUIRED for chat tile display)
+      other_participant_avatar_url: string | null, // Profile picture URL of other participant (optional)
+      last_message: string | null,           // Content of the most recent message (optional, for preview)
+      last_message_timestamp: string,        // ISO 8601 timestamp of last message (REQUIRED for sorting)
+      unread_count: number,                 // Number of unread messages for current user
+      time_created: string                   // ISO 8601 timestamp when conversation was created
+    }
+    ```
+  - **Sorting**: Backend should return conversations sorted by `last_message_timestamp` descending (most recent first). If no messages exist, sort by `time_created` descending.
+  - **Edge Cases**:
+    - If user has no conversations, return empty array: `{ message: "Success", data: [], count: 0 }`.
+    - If conversation has no messages yet, `last_message` should be `null` and `last_message_timestamp` should equal `time_created`.
+    - If listing has been deleted, `listing_id` may be present but `listing_thumbnail_url` and `listing_title` should be `null` (frontend will show placeholder).
 - **GET `/chats/conversations/{conversation_id}/messages?schema_name=...&limit=50&before_message_id=...`**
   - Fetches messages for a specific conversation with pagination.
   - Response: `{ message, data: { messages: Message[], has_more: boolean }, count }`.
@@ -246,8 +280,18 @@
   - `uid`, personal details, academic info, rating, campus region, timestamps.
 - **Image item**
   - `{ position: number; image_url: string }`, sorted by ascending position for thumbnails.
-- **Conversation (Chats)**
-  - `conversation_id: string`, `listing_id: string | null`, `listing_title: string | null`, `listing_thumbnail_url: string | null`, `other_participant_uid: string`, `other_participant_name: string`, `other_participant_avatar_url: string | null`, `last_message: string`, `last_message_timestamp: string`, `unread_count: number`, `time_created: string`.
+- **Conversation (Chats List)**
+  - `conversation_id: string` - Unique identifier for the conversation
+  - `listing_id: string | null` - ID of associated listing (null if not tied to a listing)
+  - `listing_title: string | null` - Title of the listing (for context)
+  - `listing_thumbnail_url: string | null` - **REQUIRED for chat tile**: URL of listing's thumbnail image. Display as item picture in chat tile. Null if no listing or listing deleted.
+  - `other_participant_uid: string` - UID of the other participant (buyer or seller)
+  - `other_participant_name: string` - **REQUIRED for chat tile**: Full name of other participant to display in chat tile
+  - `other_participant_avatar_url: string | null` - Profile picture URL of other participant (optional)
+  - `last_message: string | null` - Content of most recent message (optional, for preview text)
+  - `last_message_timestamp: string` - **REQUIRED for sorting**: ISO 8601 timestamp of last message. Used to sort conversations (descending order).
+  - `unread_count: number` - Number of unread messages for current user
+  - `time_created: string` - ISO 8601 timestamp when conversation was created
 - **Message**
   - `message_id: string`, `conversation_id: string`, `sender_uid: string`, `content: string`, `time_sent: string`, `time_read: string | null`, `is_read: boolean`.
 
@@ -270,26 +314,31 @@
 
 **Conversations List Screen (`app/(tabs)/chats.tsx`):**
 1. **Data Loading**
-   - On mount, fetch conversations via `GET /chats/conversations?user_uid={uid}&schema_name=...`.
-   - Show loading spinner while fetching.
-   - Handle empty state with helpful messaging.
-   - Support pull-to-refresh to sync latest.
+   - On mount, fetch conversations via `GET /chats/conversations?user_uid={uid}&schema_name={schema_name}`.
+   - Show loading spinner or skeleton loader while fetching.
+   - Handle empty state with helpful messaging: "No conversations yet. Start messaging sellers from listing pages!"
+   - Support pull-to-refresh gesture to sync latest conversations and update timestamps.
 
-2. **Conversation Row Display**
-   - Show participant avatar (or colored placeholder with initials).
-   - Display participant name (full name from profile).
-   - Show listing thumbnail if conversation is tied to a listing (small 40x40px image).
-   - Preview last message (max 50 chars, truncate with ellipsis).
-   - Show relative timestamp ("2m ago", "1h ago", "Yesterday", or "Jan 15" if older).
-   - Display unread badge (red dot or count) if `unread_count > 0`.
-   - Highlight row if unread messages exist (subtle background tint).
+2. **Chat Tile Display** (Required Elements)
+   - **Item Picture**: Display `listing_thumbnail_url` as a square thumbnail image (~60x60px or similar size). If `listing_thumbnail_url` is `null` (no listing or listing deleted), show a placeholder icon or default image.
+   - **Participant Names**: Display `other_participant_name` as the primary text element. This shows the name of the other person in the conversation (buyer sees seller name, seller sees buyer name).
+   - **Last Message Time**: Display `last_message_timestamp` formatted as:
+     - Relative time for recent messages: "2m ago", "5m ago", "1h ago", "2h ago"
+     - "Yesterday" for messages from previous day
+     - Absolute date format for older messages (>7 days): "Jan 15", "Dec 3", etc.
+   - **Optional Future Enhancements**:
+     - Preview last message text (`last_message` truncated to ~50 chars)
+     - Unread badge indicator (red dot or count badge) if `unread_count > 0`
+     - Other participant's avatar (`other_participant_avatar_url`)
+     - Highlight row styling if unread messages exist
 
 3. **Navigation**
-   - Tapping a conversation row navigates to conversation detail view.
+   - Tapping a chat tile navigates to conversation detail view.
    - Pass `conversation_id` and optionally `listing_id` as route params.
 
 4. **Sorting**
-   - Sort by `last_message_timestamp` descending (most recent first).
+   - Conversations are pre-sorted by backend by `last_message_timestamp` descending (most recent first).
+   - Frontend should display in the order received from API (no additional sorting needed).
 
 **Conversation Detail Screen** (new route, e.g., `app/chats/[conversation_id].tsx`):
 1. **Header**
